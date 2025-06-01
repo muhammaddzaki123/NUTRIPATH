@@ -14,6 +14,7 @@ export interface Message extends Models.Document {
   sender: 'user' | 'nutritionist';
   time: string;        // format: datetime
   read: boolean;       // default: false
+  userDetails?: User;  // User details for displaying names
 }
 
 export interface Nutritionist extends Models.Document {

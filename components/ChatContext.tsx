@@ -1,24 +1,24 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
+import { useGlobalContext } from '@/lib/global-provider';
+import { 
+  Message, 
+  Nutritionist, 
+  ChatContextType, 
+  MessageState, 
+  UnreadMessageState,
+  User 
+} from '@/constants/chat';
 import {
-    ChatContextType,
-    Message,
-    MessageState,
-    Nutritionist,
-    UnreadMessageState,
-    User
-} from '../constants/chat';
-import {
-    getChatMessages,
-    getNutritionistChats,
-    getNutritionists,
-    getUnreadCount,
-    markMessageAsRead,
-    sendMessage,
-    subscribeToChat,
-    subscribeToNutritionistChats,
-    updateNutritionistStatus
-} from '../lib/chat-service';
-import { useGlobalContext } from '../lib/global-provider';
+  getChatMessages,
+  getNutritionists,
+  markMessageAsRead,
+  sendMessage,
+  subscribeToChat,
+  subscribeToNutritionistChats,
+  updateNutritionistStatus,
+  getUnreadCount,
+  getNutritionistChats
+} from '@/lib/chat-service';
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
@@ -29,6 +29,44 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   const [unreadMessages, setUnreadMessages] = useState<UnreadMessageState>({});
   const [loading, setLoading] = useState(false);
   const { user } = useGlobalContext() as { user: User | null };
+
+  // Deduplicate messages helper
+  const deduplicateMessages = useCallback((chatMessages: Message[]): Message[] => {
+    const uniqueMessages = new Map<string, Message>();
+    chatMessages.forEach((msg) => {
+      if (!uniqueMessages.has(msg.$id)) {
+        uniqueMessages.set(msg.$id, msg);
+      }
+    });
+    return Array.from(uniqueMessages.values())
+      .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
+  }, []);
+
+  // Update messages helper
+  const updateMessages = useCallback((chatId: string, newMessage: Message) => {
+    setMessages((prev: MessageState) => {
+      const chatMessages = prev[chatId] || [];
+      const messageExists = chatMessages.some((msg: Message) => msg.$id === newMessage.$id);
+      
+      if (messageExists) {
+        // Update existing message
+        const updatedMessages = chatMessages.map((msg: Message) =>
+          msg.$id === newMessage.$id ? newMessage : msg
+        );
+        return {
+          ...prev,
+          [chatId]: deduplicateMessages(updatedMessages)
+        };
+      }
+      
+      // Add new message
+      const updatedMessages = [...chatMessages, newMessage];
+      return {
+        ...prev,
+        [chatId]: deduplicateMessages(updatedMessages)
+      };
+    });
+  }, [deduplicateMessages]);
 
   // Fetch nutritionists list and setup status
   useEffect(() => {
@@ -48,7 +86,12 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
           
           // Load all chats for nutritionist
           const chats = await getNutritionistChats(user.$id);
-          setMessages(chats);
+          // Deduplicate messages in each chat
+          const deduplicatedChats: MessageState = {};
+          Object.entries(chats).forEach(([chatId, chatMessages]) => {
+            deduplicatedChats[chatId] = deduplicateMessages(chatMessages);
+          });
+          setMessages(deduplicatedChats);
         }
       } catch (error) {
         console.error('Error fetching nutritionists:', error);
@@ -65,7 +108,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         updateNutritionistStatus(user.$id, 'offline').catch(console.error);
       }
     };
-  }, [user]);
+  }, [user, deduplicateMessages]);
 
   // Subscribe to real-time messages for current chat
   useEffect(() => {
@@ -80,29 +123,8 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         
         unsubscribe = await subscribeToChat(currentChat, (newMessage: Message) => {
           if (!isSubscribed) return;
-
           console.log('Received message:', newMessage);
-          
-          setMessages((prev: MessageState) => {
-            const chatMessages = prev[newMessage.chatId] || [];
-            const messageExists = chatMessages.some((msg: Message) => msg.$id === newMessage.$id);
-            
-            if (messageExists) {
-              // Update existing message (e.g., read status)
-              return {
-                ...prev,
-                [newMessage.chatId]: chatMessages.map((msg: Message) =>
-                  msg.$id === newMessage.$id ? newMessage : msg
-                )
-              };
-            }
-            
-            // Add new message
-            return {
-              ...prev,
-              [newMessage.chatId]: [...chatMessages, newMessage]
-            };
-          });
+          updateMessages(newMessage.chatId, newMessage);
 
           // Update unread count for messages from the other party
           if (user.userType === 'nutritionist' && newMessage.sender === 'user' ||
@@ -131,7 +153,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         unsubscribe();
       }
     };
-  }, [user, currentChat]);
+  }, [user, currentChat, updateMessages]);
 
   // Subscribe to all chats if user is a nutritionist
   useEffect(() => {
@@ -146,29 +168,8 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         
         unsubscribe = await subscribeToNutritionistChats(user.$id, (newMessage: Message) => {
           if (!isSubscribed) return;
-
           console.log('Received message for nutritionist:', newMessage);
-          
-          setMessages((prev: MessageState) => {
-            const chatMessages = prev[newMessage.chatId] || [];
-            const messageExists = chatMessages.some((msg: Message) => msg.$id === newMessage.$id);
-            
-            if (messageExists) {
-              return {
-                ...prev,
-                [newMessage.chatId]: chatMessages.map((msg: Message) =>
-                  msg.$id === newMessage.$id ? newMessage : msg
-                )
-              };
-            }
-            
-            return {
-              ...prev,
-              [newMessage.chatId]: [...chatMessages, newMessage].sort(
-                (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()
-              )
-            };
-          });
+          updateMessages(newMessage.chatId, newMessage);
 
           // Update unread count if message is from user
           if (newMessage.sender === 'user' && currentChat !== newMessage.chatId) {
@@ -194,7 +195,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         unsubscribe();
       }
     };
-  }, [user]);
+  }, [user, currentChat, updateMessages]);
 
   // Fetch existing messages and unread count for current chat
   useEffect(() => {
@@ -215,7 +216,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         
         setMessages((prev: MessageState) => ({
           ...prev,
-          [currentChat]: chatMessages
+          [currentChat]: deduplicateMessages(chatMessages)
         }));
 
         setUnreadMessages((prev: UnreadMessageState) => ({
@@ -241,7 +242,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     };
 
     fetchMessages();
-  }, [user, currentChat]);
+  }, [user, currentChat, deduplicateMessages]);
 
   const addMessage = async (targetId: string, text: string) => {
     if (!user) throw new Error('User not authenticated');
@@ -274,11 +275,14 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       nutritionistId
     };
 
-    // Optimistic update
-    setMessages((prev: MessageState) => ({
-      ...prev,
-      [chatId]: [...(prev[chatId] || []), tempMessage as Message]
-    }));
+    // Optimistic update with deduplication
+    setMessages((prev: MessageState) => {
+      const chatMessages = prev[chatId] || [];
+      return {
+        ...prev,
+        [chatId]: deduplicateMessages([...chatMessages, tempMessage as Message])
+      };
+    });
 
     try {
       const sentMessage = await sendMessage({
@@ -289,21 +293,28 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       }, user.userType);
 
       // Update temporary message with server response
-      setMessages((prev: MessageState) => ({
-        ...prev,
-        [chatId]: prev[chatId].map((msg: Message) => 
+      setMessages((prev: MessageState) => {
+        const chatMessages = prev[chatId] || [];
+        const updatedMessages = chatMessages.map((msg: Message) => 
           msg.$id === tempId ? sentMessage : msg
-        )
-      }));
+        );
+        return {
+          ...prev,
+          [chatId]: deduplicateMessages(updatedMessages)
+        };
+      });
 
       console.log('Message sent successfully:', sentMessage);
     } catch (error) {
       console.error('Error sending message:', error);
       // Remove temporary message if sending failed
-      setMessages((prev: MessageState) => ({
-        ...prev,
-        [chatId]: prev[chatId].filter((msg: Message) => msg.$id !== tempId)
-      }));
+      setMessages((prev: MessageState) => {
+        const chatMessages = prev[chatId] || [];
+        return {
+          ...prev,
+          [chatId]: deduplicateMessages(chatMessages.filter((msg: Message) => msg.$id !== tempId))
+        };
+      });
       throw error;
     }
   };

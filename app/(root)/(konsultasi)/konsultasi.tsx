@@ -1,41 +1,17 @@
+import { useChat } from '@/components/ChatContext';
+import { Nutritionist } from '@/constants/chat';
+import { useGlobalContext } from '@/lib/global-provider';
 import { FontAwesome } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import React, { useState } from 'react';
+import { ActivityIndicator, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useChat } from '../../../components/ChatContext';
-import { Message, Nutritionist } from '../../../constants/chat';
-import { getNutritionistChats } from '../../../lib/chat-service';
-import { useGlobalContext } from '../../../lib/global-provider';
 
 const KonsultasiScreen = () => {
   const { nutritionists, unreadMessages, loading: chatLoading, messages } = useChat();
   const { user } = useGlobalContext();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [nutritionistChats, setNutritionistChats] = useState<{[key: string]: Message[]}>({});
-
-  // Load nutritionist chats
-  useEffect(() => {
-    const loadNutritionistChats = async () => {
-      if (!user || user.userType !== 'nutritionist') return;
-
-      try {
-        setLoading(true);
-        console.log('Loading chats for nutritionist:', user.$id);
-        const chats = await getNutritionistChats(user.$id);
-        console.log('Loaded chats:', Object.keys(chats).length);
-        setNutritionistChats(chats);
-      } catch (error) {
-        console.error('Error loading nutritionist chats:', error);
-        Alert.alert('Error', 'Gagal memuat daftar chat');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadNutritionistChats();
-  }, [user]);
 
   // Check if user is logged in
   if (!user) {
@@ -52,7 +28,7 @@ const KonsultasiScreen = () => {
     );
   }
 
-  // Show loading state only for initial load
+  // Show loading state
   if ((loading && user.userType === 'nutritionist') || (chatLoading && user.userType === 'user')) {
     return (
       <SafeAreaView className="flex-1 bg-[#1CD6CE] items-center justify-center">
@@ -66,7 +42,7 @@ const KonsultasiScreen = () => {
 
   // If user is a nutritionist, show chat list
   if (user.userType === 'nutritionist') {
-    const chatList = Object.entries(nutritionistChats)
+    const chatList = Object.entries(messages)
       .map(([chatId, chatMessages]) => {
         const lastMessage = chatMessages[chatMessages.length - 1];
         const userId = chatId.split('-')[0];
@@ -74,12 +50,17 @@ const KonsultasiScreen = () => {
           msg => !msg.read && msg.sender === 'user'
         ).length;
 
+        // Get user details from the last message
+        const userDetails = lastMessage?.userDetails;
+
         return {
           chatId,
           lastMessage,
           userId,
           unreadCount,
-          timestamp: lastMessage?.time || ''
+          timestamp: lastMessage?.time || '',
+          userName: userDetails?.name || `User ${userId}`,
+          userAvatar: userDetails?.avatar
         };
       })
       .sort((a, b) => b.timestamp.localeCompare(a.timestamp));
@@ -100,7 +81,7 @@ const KonsultasiScreen = () => {
         <ScrollView className="flex-1 bg-white rounded-t-3xl">
           <View className="p-4">
             {chatList.length > 0 ? (
-              chatList.map(({ chatId, lastMessage, userId, unreadCount }) => (
+              chatList.map(({ chatId, lastMessage, userId, unreadCount, userName, userAvatar }) => (
                 <Link
                   key={chatId}
                   href={`/chat/${userId}`}
@@ -112,11 +93,18 @@ const KonsultasiScreen = () => {
                   >
                     <View className="flex-row items-center">
                       <View className="w-12 h-12 rounded-full bg-gray-100 items-center justify-center">
-                        <FontAwesome name="user-circle" size={30} color="#666" />
+                        {userAvatar ? (
+                          <Image 
+                            source={{ uri: userAvatar }}
+                            className="w-12 h-12 rounded-full"
+                          />
+                        ) : (
+                          <FontAwesome name="user-circle" size={30} color="#666" />
+                        )}
                       </View>
                       <View className="ml-3 flex-1">
                         <Text className="font-bold text-gray-900">
-                          User {userId}
+                          {userName}
                         </Text>
                         {lastMessage && (
                           <>
@@ -153,7 +141,7 @@ const KonsultasiScreen = () => {
     );
   }
 
-  // For regular users, show nutritionist list with optimized rendering
+  // For regular users, show nutritionist list
   return (
     <SafeAreaView className="flex-1 bg-[#1CD6CE]">
       <View className="flex-row items-center px-4 py-3">

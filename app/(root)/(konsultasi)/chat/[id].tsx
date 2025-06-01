@@ -1,22 +1,22 @@
+import { useChat } from '@/components/ChatContext';
+import { useGlobalContext } from '@/lib/global-provider';
+import { Message, Nutritionist } from '@/constants/chat';
 import { FontAwesome } from '@expo/vector-icons';
 import { Link, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+import React, { useEffect, useRef, useState, useMemo } from 'react';
+import { 
+  ActivityIndicator, 
+  Image, 
+  KeyboardAvoidingView, 
+  Platform, 
+  ScrollView, 
+  Text, 
+  TextInput, 
+  TouchableOpacity, 
+  View,
+  Alert 
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useChat } from '../../../../components/ChatContext';
-import { Message, Nutritionist } from '../../../../constants/chat';
-import { useGlobalContext } from '../../../../lib/global-provider';
 
 const ChatScreen = () => {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -27,10 +27,19 @@ const ChatScreen = () => {
   const [sending, setSending] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
   
-  // For nutritionist view, we need to find the user details
-  const chatPartner = user?.userType === 'nutritionist' 
-    ? { name: `User ${id}`, avatar: null }
-    : nutritionists.find((n: Nutritionist) => n.$id === id);
+  // For nutritionist view, we need to find the user details from messages
+  const chatPartner = useMemo(() => {
+    if (!user || !id) return null;
+
+    if (user.userType === 'nutritionist') {
+      const chatId = `${id}-${user.$id}`;
+      const chatMessages = messages[chatId] || [];
+      const lastMessage = chatMessages[chatMessages.length - 1];
+      return lastMessage?.userDetails || { name: `User ${id}`, avatar: null };
+    } else {
+      return nutritionists.find((n: Nutritionist) => n.$id === id);
+    }
+  }, [user, id, messages, nutritionists]);
 
   useEffect(() => {
     if (!user) {
@@ -56,7 +65,23 @@ const ChatScreen = () => {
   const chatId = user && id 
     ? (user.userType === 'nutritionist' ? `${id}-${user.$id}` : `${user.$id}-${id}`)
     : null;
-  const chatMessages = chatId ? (messages[chatId] || []) : [];
+
+  // Deduplicate messages using useMemo
+  const chatMessages = useMemo(() => {
+    if (!chatId || !messages[chatId]) return [];
+
+    // Create a Map to store unique messages by their ID
+    const uniqueMessages = new Map<string, Message>();
+    messages[chatId].forEach((msg) => {
+      if (!uniqueMessages.has(msg.$id)) {
+        uniqueMessages.set(msg.$id, msg);
+      }
+    });
+
+    // Convert Map back to array and sort by time
+    return Array.from(uniqueMessages.values())
+      .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
+  }, [chatId, messages]);
 
   // Auto scroll to bottom when new messages arrive
   useEffect(() => {
@@ -201,12 +226,11 @@ const ChatScreen = () => {
           ) : (
             chatMessages.map((message: Message, index: number) => {
               const isUser = message.sender === user?.userType;
-              const key = message.$id || `${message.chatId}-${message.time}-${index}`;
               const showAvatar = !isUser && (!chatMessages[index - 1] || chatMessages[index - 1].sender === user?.userType);
               
               return (
                 <View 
-                  key={key}
+                  key={message.$id}
                   className={`flex-row ${isUser ? 'justify-end' : 'justify-start'} mb-3`}
                 >
                   {!isUser && showAvatar && (
