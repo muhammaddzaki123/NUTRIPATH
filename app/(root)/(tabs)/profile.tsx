@@ -13,6 +13,7 @@ import { logout } from "@/lib/appwrite";
 import { useGlobalContext } from "@/lib/global-provider";
 
 import icons from "@/constants/icons";
+import { router } from "expo-router";
 
 interface SettingsItemProp {
   icon: ImageSourcePropType;
@@ -52,6 +53,7 @@ const Profile = () => {
     if (result) {
       Alert.alert("Success", "Logged out successfully");
       refetch();
+      router.push('/sign-in');
     } else {
       Alert.alert("Error", "Failed to logout");
     }

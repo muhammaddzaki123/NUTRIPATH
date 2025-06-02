@@ -10,7 +10,7 @@ import { ActivityIndicator, Alert, Image, ScrollView, Text, TouchableOpacity, Vi
 
 const Home = () => {
   const [menuVisible, setMenuVisible] = useState(false);
-  const { user, refetch } = useGlobalContext();
+  const { user, refetch } = useGlobalContext(); // Dapatkan data user dari global context
   const router = useRouter();
   const { articles, loading, error } = useArticles();
 
@@ -18,7 +18,7 @@ const Home = () => {
     const result = await logout();
     if (result) {
       Alert.alert("Success", "Logged out successfully");
-      refetch();
+      refetch(); // Memperbarui status user setelah logout
     } else {
       Alert.alert("Error", "Failed to logout");
     }
@@ -34,7 +34,7 @@ const Home = () => {
       />
 
       {/* Header */}
-      <View className="flex-row justify-between items-center px-4 pt-4 ">
+      <View className="flex-row justify-between items-center px-4 pt-4">
         <Image 
           source={images.logoawal}
           className="w-44 h-20"
@@ -42,10 +42,11 @@ const Home = () => {
         />
         <TouchableOpacity onPress={() => setMenuVisible(!menuVisible)}>
           <Image 
-            source={{uri: user?.avatar}}
+            source={{ uri: user?.avatar }} // Menampilkan avatar jika pengguna sudah login
             className="w-10 h-10 rounded-full"
           />
         </TouchableOpacity>
+
         {menuVisible && (
           <>
             {/* Transparent overlay to close when tapping outside */}
@@ -55,22 +56,42 @@ const Home = () => {
             />
 
             <View className="absolute top-20 right-4 bg-white rounded-2xl p-4 shadow-xl w-56 z-50">
-              <TouchableOpacity 
-                className="flex-row items-center mb-4"
-                onPress={() => {
-                  setMenuVisible(false);
-                  handleLogout();
-                }}
-              >
-                <Image source={icons.logout} className="w-6 h-6 mr-3 tint-red-500" />
-                <Text className="text-lg font-semibold text-black">Logout</Text>
-              </TouchableOpacity>
+              {!user ? (
+                // Jika user belum login
+                <>
+                  <TouchableOpacity 
+                    className="flex-row items-center mb-4"
+                    onPress={() => {
+                      setMenuVisible(false);
+                      router.push('/sign-in'); // Menuju halaman login
+                    }}
+                  >
+                    <Image source={icons.logout} className="w-6 h-6 mr-3" />
+                    <Text className="text-lg font-semibold text-black">Login</Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                // Jika user sudah login
+                <>
+                  <TouchableOpacity 
+                    className="flex-row items-center mb-4"
+                    onPress={() => {
+                      setMenuVisible(false);
+                      handleLogout(); // Melakukan logout
+                    }}
+                  >
+                    <Image source={icons.logout} className="w-6 h-6 mr-3 tint-red-500" />
+                    <Text className="text-lg font-semibold text-black">Logout</Text>
+                  </TouchableOpacity>
+                </>
+              )}
 
+              {/* Opsi 'About Us' tetap ada */}
               <TouchableOpacity 
                 className="flex-row items-center"
                 onPress={() => {
                   setMenuVisible(false);
-                  router.push('/profile');
+                  router.push('/profile'); // Menuju halaman profil
                 }}
               >
                 <Text className="text-lg font-semibold text-black">About Us</Text>

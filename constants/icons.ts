@@ -4,6 +4,8 @@ import fillter from "@/assets/icons/filter.png";
 import google from "@/assets/icons/google.png";
 import heart from "@/assets/icons/heart.png";
 import home from "@/assets/icons/home.png";
+import logo2 from "@/assets/icons/logo2.png";
+import logoawal1 from "@/assets/icons/logoawal1.png";
 import logout from "@/assets/icons/logout.png";
 import page1 from "@/assets/icons/Page1.png";
 import person from "@/assets/icons/person.png";
@@ -26,4 +28,6 @@ export default {
   heart,
   page1,
   profile,
+  logoawal1,
+  logo2,
 };

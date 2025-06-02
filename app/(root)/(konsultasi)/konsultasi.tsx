@@ -1,7 +1,7 @@
 import { useChat } from '@/components/ChatContext';
 import { Nutritionist } from '@/constants/chat';
 import { useGlobalContext } from '@/lib/global-provider';
-import { FontAwesome } from '@expo/vector-icons';
+import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { ActivityIndicator, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
@@ -144,17 +144,12 @@ const KonsultasiScreen = () => {
   // For regular users, show nutritionist list
   return (
     <SafeAreaView className="flex-1 bg-[#1CD6CE]">
-      <View className="flex-row items-center px-4 py-3">
-        <Link href="/" className="mr-auto">
-          <View className="w-8 h-8 justify-center">
-            <Text className="text-white text-2xl">←</Text>
-          </View>
-        </Link>
-        <Text className="text-white text-xl font-bold absolute left-0 right-0 text-center">
-          KONSULTASI GIZI
-        </Text>
+      <View className="flex-row items-center pt-5 pb-2 mb-4 justify-between">
+        <TouchableOpacity onPress={() => router.replace('/')} className='mr-auto'>
+          <Ionicons name="arrow-back" size={24} color={"white"} className='ml-2' />
+        </TouchableOpacity>
+        <Text className="text-white text-xl font-bold  ml-4 ">RECALL</Text>
       </View>
-
       <ScrollView 
         className="flex-1 bg-white rounded-t-3xl"
         removeClippedSubviews={true}

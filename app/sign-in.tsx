@@ -15,6 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import images from "@/constants/images";
 import { loginNutritionist, loginUser } from "@/lib/appwrite";
 import { useGlobalContext } from "@/lib/global-provider";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function SignIn() {
   const router = useRouter();
@@ -22,11 +23,11 @@ export default function SignIn() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [userType, setUserType] = useState("user"); 
+  const [userType, setUserType] = useState("user");
 
   React.useEffect(() => {
     if (!loading && isLogged) {
-      router.replace("/");
+      router.replace("/"); // Redirect ke halaman utama jika sudah login
     }
   }, [loading, isLogged]);
 
@@ -57,15 +58,26 @@ export default function SignIn() {
 
   return (
     <SafeAreaView className="flex-1 bg-white">
+      <View className="flex-row items-center pt-5 border-b border-white pb-2 mb-4">
+        <TouchableOpacity onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color={"black"} className='ml-2' />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => router.back()} className="ml-auto">
+          <Text className="text-3xl text-white mr-4">×</Text>
+        </TouchableOpacity>
+      </View>
       <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
         <View className="flex-1 px-6 py-6">
-          {/* Logo */}
-          <View className="items-center mb-8">
-            <Image
-              source={images.logoawal}
-              className="w-[250px] h-[250px]"
-              resizeMode="contain"
-            />
+          {/* Header with Back Button */}
+          <View className="flex-row items-center">
+            {/* Logo */}
+            <View className="items-center mb-8 flex-1">
+              <Image
+                source={images.logoawal}
+                className="w-[250px] h-[250px]"
+                resizeMode="contain"
+              />
+            </View>
           </View>
 
           {/* Welcome Text */}
@@ -114,7 +126,7 @@ export default function SignIn() {
               </Text>
             </TouchableOpacity>
           </View>
-          </View>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
