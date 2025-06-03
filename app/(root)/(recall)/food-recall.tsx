@@ -33,35 +33,65 @@ const FoodInputRow = ({
   placeholder?: string;
 }) => (
   <View className="mb-4">
-    <View className="flex-row items-center space-x-2">
-      <TextInput
-        className="w-32 bg-white rounded-xl p-3 text-base"
-        value={value.name}
-        onChangeText={(text: string) => onChange({ ...value, name: text })}
-        placeholder={placeholder}
-      />
-      <TextInput
-        className="w-20 bg-white rounded-xl p-3 text-base ml-1"
-        value={value.amount}
-        onChangeText={(text: string) => onChange({ ...value, amount: text })}
-        placeholder="Jumlah"
-        keyboardType="numeric"
-      />
-      <View className="w-35 bg-white rounded-xl overflow-hidden ml-1">
-        <Picker
-          selectedValue={value.unit}
-          onValueChange={(text: string) => onChange({ ...value, unit: text })}
-          style={{ height: 48, paddingHorizontal: 10, minWidth: 100, backgroundColor: 'white' }}
-        >
-          <Picker.Item label="URT" value="" />
-          {urtOptions.map((unit: string) => 
+    <View className="flex-row items-center space-x-3">
+      {/* Nama Makanan */}
+      <View className="flex-1 w-[96px]">
+        <TextInput
+          className="bg-white rounded-2xl px-4 py-3.5 text-base shadow-sm"
+          style={{ elevation: 2 }}
+          value={value.name}
+          onChangeText={(text: string) => onChange({ ...value, name: text })}
+          placeholder={placeholder}
+          placeholderTextColor="#9CA3AF"
+        />
+      </View>
+
+      {/* Jumlah */}
+      <View >
+        <TextInput
+          className="bg-white rounded-2xl px-4 py-3.5 text-base text-center shadow-sm ml-1"
+          style={{ elevation: 2 }}
+          value={value.amount}
+          onChangeText={(text: string) => onChange({ ...value, amount: text })}
+          placeholder="Jumlah"
+          placeholderTextColor="#9CA3AF"
+          keyboardType="numeric"
+        />
+      </View>
+
+      {/* URT Picker */}
+      <View className="w-[130px]">
+        <View className="bg-white rounded-2xl shadow-sm overflow-hidden ml-1"
+              style={{ elevation: 2 }}>
+          <Picker
+            selectedValue={value.unit}
+            onValueChange={(text: string) => onChange({ ...value, unit: text })}
+            style={{ 
+              height: 48,
+              width: '100%',
+              backgroundColor: 'white',
+            }}
+          >
             <Picker.Item 
-              key={unit} 
-              label={unit} 
-              value={unit}
+              label="Pilih URT" 
+              value="" 
+              style={{
+                fontSize: 14,
+                color: '#9CA3AF'
+              }}
             />
-          )}
-        </Picker>
+            {urtOptions.map((unit: string) => 
+              <Picker.Item 
+                key={unit} 
+                label={unit} 
+                value={unit}
+                style={{
+                  fontSize: 14
+                }}
+              />
+            )}
+          </Picker>
+        </View>
       </View>
     </View>
   </View>
@@ -187,39 +217,54 @@ export default function FoodRecallScreen() {
         </View>
 
         <ScrollView className="flex-1 px-6 pb-5 mb-5">
-          <View className="space-y-8">
-            <Text className="text-white text-2xl font-semibold">
-              {mealType === 'breakfast' ? 'Makan Pagi' :
-               mealType === 'lunch' ? 'Makan Siang' : 'Makan Malam'}
-            </Text>
+          <View className="space-y-6">
+            {/* Meal Type Header */}
+            <View className="bg-white/10 rounded-2xl mb-4">
+              <Text className="text-white text-2xl font-rubik-bold text-center">
+                {mealType === 'breakfast' ? 'Makan Pagi' :
+                 mealType === 'lunch' ? 'Makan Siang' : 'Makan Malam'}
+              </Text>
+            </View>
 
-            <View className="space-y-8">
-              <View>
-                <Text className="text-white text-lg font-medium mb-2">Nasi/karbohidrat :</Text>
+            <View className="space-y-6">
+              {/* Carbs Section */}
+              <View className="bg-white/10 rounded-2xl p-4 mb-2">
+                <Text className="text-white text-lg font-rubik-semibold mb-4">
+                  Nasi/Karbohidrat
+                </Text>
                 <FoodInputRow
                   value={currentMeal.carbs}
                   onChange={(data) => updateFood(mealType, 'carbs', 0, data)}
+                  placeholder="Contoh: Nasi Putih"
                 />
               </View>
 
-              <View>
-                <Text className="text-white text-lg font-medium mb-2">Lainnya :</Text>
+              {/* Main Dishes Section */}
+              <View className="bg-white/10 rounded-2xl p-4 mb-2">
+                <Text className="text-white text-lg font-rubik-semibold mb-4">
+                  Lauk Pauk
+                </Text>
                 {currentMeal.others.map((food: FoodInput, index: number) => (
                   <FoodInputRow
                     key={`other-${index}`}
                     value={food}
                     onChange={(data) => updateFood(mealType, 'others', index, data)}
+                    placeholder="Contoh: Ayam Goreng"
                   />
                 ))}
               </View>
 
-              <View>
-                <Text className="text-white text-lg font-medium mb-2">Selingan :</Text>
+              {/* Snacks Section */}
+              <View className="bg-white/10 rounded-2xl p-4">
+                <Text className="text-white text-lg font-rubik-semibold mb-4">
+                  Makanan Selingan
+                </Text>
                 {currentMeal.snacks.map((food: FoodInput, index: number) => (
                   <FoodInputRow
                     key={`snack-${index}`}
                     value={food}
                     onChange={(data) => updateFood(mealType, 'snacks', index, data)}
+                    placeholder="Contoh: Buah Apel"
                   />
                 ))}
               </View>

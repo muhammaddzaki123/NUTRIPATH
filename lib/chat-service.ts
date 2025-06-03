@@ -1,7 +1,6 @@
-import { databases, client } from './appwrite';
-import { config } from './appwrite';
-import { Message, SendMessageData, ChatSubscriptionResponse, Nutritionist, User } from '@/constants/chat';
-import { Query, Models } from 'react-native-appwrite';
+import { ChatSubscriptionResponse, Message, Nutritionist, SendMessageData, User } from '@/constants/chat';
+import { Query } from 'react-native-appwrite';
+import { client, config, databases } from './appwrite';
 
 // Get user details by ID
 export const getUserDetails = async (userId: string): Promise<User | null> => {

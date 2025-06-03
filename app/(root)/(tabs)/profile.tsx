@@ -1,4 +1,8 @@
-import { useState } from "react"; // Import useState
+import icons from "@/constants/icons";
+import { logout } from "@/lib/appwrite";
+import { useGlobalContext } from "@/lib/global-provider";
+import { router } from "expo-router";
+import { useState } from "react";
 import {
   Alert,
   Image,
@@ -10,12 +14,6 @@ import {
   View,
 } from "react-native";
 
-import { logout } from "@/lib/appwrite";
-import { useGlobalContext } from "@/lib/global-provider";
-
-import icons from "@/constants/icons";
-import { router } from "expo-router";
-
 interface SettingsItemProp {
   icon: ImageSourcePropType;
   title: string;
@@ -23,6 +21,94 @@ interface SettingsItemProp {
   textStyle?: string;
   showArrow?: boolean;
 }
+
+// Define disease information type
+interface DiseaseInfo {
+  title: string;
+  description: string;
+}
+
+interface DiseaseInformation {
+  [key: string]: DiseaseInfo;
+}
+
+const diseaseInformation: DiseaseInformation = {
+  hipertensi: {
+    title: "Hipertensi",
+    description: `Hipertensi adalah kondisi di mana tekanan darah seseorang meningkat melebihi batas normal secara konsisten. Ini berarti tekanan darah pada dinding arteri (pembuluh darah) terlalu tinggi. Hipertensi sering disebut sebagai "silent killer" karena sering tidak memiliki gejala yang jelas. 
+
+Lebih Detail:
+Tekanan Darah:
+- Tekanan darah adalah kekuatan yang dihasilkan oleh aliran darah ketika memompa melalui pembuluh darah. 
+- Ada dua jenis tekanan darah: 
+  * Tekanan Sistolik: Tekanan saat jantung berkontraksi dan memompa darah. 
+  * Tekanan Diastolik: Tekanan saat jantung beristirahat di antara detak jantung. 
+
+Gejala:
+- Sakit kepala
+- Pusing
+- Pendarahan hidung
+- Mual dan muntah
+- Kelelahan
+- Pandangan kabur
+
+Pencegahan:
+- Kurangi konsumsi garam
+- Olahraga teratur
+- Hindari stres
+- Jaga berat badan ideal
+- Hindari rokok dan alkohol`
+  },
+  diabetes: {
+    title: "Diabetes",
+    description: `Diabetes adalah penyakit kronis yang terjadi ketika tubuh tidak dapat menghasilkan insulin yang cukup atau tidak dapat menggunakan insulin secara efektif. Insulin adalah hormon yang mengatur kadar gula darah.
+
+Lebih Detail:
+Tipe Diabetes:
+- Diabetes Tipe 1: Sistem kekebalan tubuh menyerang sel penghasil insulin
+- Diabetes Tipe 2: Tubuh tidak dapat menggunakan insulin dengan baik
+- Diabetes Gestasional: Terjadi selama kehamilan
+
+Gejala:
+- Sering haus dan buang air kecil
+- Mudah lelah
+- Penurunan berat badan
+- Luka yang sulit sembuh
+- Penglihatan kabur
+
+Pencegahan:
+- Makan makanan sehat
+- Kontrol berat badan
+- Olahraga teratur
+- Pantau kadar gula darah
+- Hindari makanan tinggi gula`
+  },
+  kanker: {
+    title: "Kanker",
+    description: `Kanker adalah penyakit yang terjadi ketika sel-sel abnormal dalam tubuh tumbuh tidak terkendali. Sel-sel ini dapat menyebar ke bagian tubuh lainnya melalui darah dan sistem limfatik.
+
+Lebih Detail:
+Jenis Kanker:
+- Karsinoma: Kanker yang dimulai di kulit atau jaringan
+- Sarkoma: Kanker di jaringan ikat
+- Leukemia: Kanker darah
+- Limfoma: Kanker sistem limfatik
+
+Gejala Umum:
+- Benjolan atau pertumbuhan tidak normal
+- Perubahan pada kulit
+- Perubahan kebiasaan buang air
+- Penurunan berat badan tidak wajar
+- Kelelahan berkepanjangan
+
+Pencegahan:
+- Hindari merokok
+- Makan makanan sehat
+- Olahraga teratur
+- Hindari paparan sinar UV berlebihan
+- Pemeriksaan rutin`
+  }
+};
 
 const SettingsItem = ({
   icon,
@@ -41,14 +127,14 @@ const SettingsItem = ({
         {title}
       </Text>
     </View>
-
     {showArrow && <Image source={icons.rightArrow} className="size-5" />}
   </TouchableOpacity>
 );
 
 const Profile = () => {
   const { user, refetch } = useGlobalContext();
-  const [isHypertensionExpanded, setIsHypertensionExpanded] = useState(false); // State for hypertension text
+  const [isTextExpanded, setIsTextExpanded] = useState(false);
+  const initialLinesToShow = 5;
 
   const handleLogout = async () => {
     const result = await logout();
@@ -61,28 +147,26 @@ const Profile = () => {
     }
   };
 
-  const toggleHypertensionText = () => {
-    setIsHypertensionExpanded(!isHypertensionExpanded);
+  const toggleText = () => {
+    setIsTextExpanded(!isTextExpanded);
   };
 
-  const hypertensionFullText = `Hipertensi adalah kondisi di mana tekanan darah seseorang meningkat melebihi batas normal secara konsisten. Ini berarti tekanan darah pada dinding arteri (pembuluh darah) terlalu tinggi. Hipertensi sering disebut sebagai "silent killer" karena sering tidak memiliki gejala yang jelas. 
-Lebih Detail:
-Tekanan Darah:
-Tekanan darah adalah kekuatan yang dihasilkan oleh aliran darah ketika memompa melalui pembuluh darah. Ada dua jenis tekanan darah: 
-Tekanan Sistolik: Tekanan saat jantung berkontraksi dan memompa darah. 
-Tekanan Diastolik: Tekanan saat jantung beristirahat di antara detak jantung. 
-Hipertensi:
-Hipertensi adalah kondisi ketika tekanan sistolik lebih dari atau sama dengan 140 mmHg, dan/atau tekanan diastolik lebih dari atau sama dengan 90 mmHg. 
-Gejala:
-Hipertensi sering tidak memiliki gejala yang jelas, sehingga sering disebut sebagai "silent killer". Namun, beberapa gejala hipertensi yang mungkin muncul antara lain: sakit kepala, pusing, pendarahan hidung, mual, muntah, kelelahan, dan pandangan kabur. 
-Bahaya:
-Hipertensi yang tidak terkontrol dapat menyebabkan komplikasi serius seperti penyakit jantung koroner dan stroke, gagal jantung, gagal ginjal, penyakit vaskular perifer, dan kerusakan pembuluh darah retina. 
-Penyebab:
-Hipertensi dapat disebabkan oleh berbagai faktor, termasuk faktor genetik, obesitas, kurangnya aktivitas fisik, konsumsi garam berlebihan, stres, dan usia. 
-Pencegahan:
-Hipertensi dapat dicegah dengan menjaga berat badan ideal, mengurangi konsumsi garam, berolahraga secara teratur, mengelola stres, dan tidak merokok.`;
+  // Function to determine which disease information to show
+  const getDiseaseInfo = () => {
+    if (!user) return null;
+    
+    if (user.userType === 'user' && user.disease && user.disease.toLowerCase() in diseaseInformation) {
+      return diseaseInformation[user.disease.toLowerCase()];
+    }
+    
+    if (user.userType === 'nutritionist' && user.specialization && user.specialization.toLowerCase() in diseaseInformation) {
+      return diseaseInformation[user.specialization.toLowerCase()];
+    }
+    
+    return null;
+  };
 
-  const initialLinesToShow = 5; // Number of lines to show initially
+  const diseaseInfo = getDiseaseInfo();
 
   return (
     <SafeAreaView className="h-full bg-primary-400">
@@ -118,23 +202,25 @@ Hipertensi dapat dicegah dengan menjaga berat badan ideal, mengurangi konsumsi g
           </View>
         </View>
 
-        <View className="flex flex-col mt-5 border-t pt-5 border-primary-200">
-          <View className="bg-primary-200 rounded-2xl p-5">
-            <Text className="text-lg font-rubik-bold">HIpertensi:</Text>
-            <Text
-              className="text-lg font-rubik-regular text-wrap text-justify"
-              numberOfLines={isHypertensionExpanded ? undefined : initialLinesToShow}
-              ellipsizeMode="tail" // Optional: adds "..." at the end of truncated text
-            >
-              {hypertensionFullText}
-            </Text>
-            <TouchableOpacity onPress={toggleHypertensionText} className="mt-2 self-start">
-              <Text className="text-lg font-rubik-medium text-secondary-200">
-                {isHypertensionExpanded ? "Lihat Lebih Sedikit" : "Lihat Lebih Banyak"}
+        {user && diseaseInfo && (
+          <View className="flex flex-col mt-5 border-t pt-5 border-primary-200">
+            <View className="bg-primary-200 rounded-2xl p-5">
+              <Text className="text-lg font-rubik-bold">{diseaseInfo.title}:</Text>
+              <Text
+                className="text-lg font-rubik-regular text-wrap text-justify"
+                numberOfLines={isTextExpanded ? undefined : initialLinesToShow}
+                ellipsizeMode="tail"
+              >
+                {diseaseInfo.description}
               </Text>
-            </TouchableOpacity>
+              <TouchableOpacity onPress={toggleText} className="mt-2 self-start">
+                <Text className="text-lg font-rubik-medium text-secondary-200">
+                  {isTextExpanded ? "Lihat Lebih Sedikit" : "Lihat Lebih Banyak"}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
+        )}
 
         <View className="flex flex-col mt-5 border-t pt-5 border-primary-200">
           <View className="bg-primary-200 rounded-2xl p-5">
@@ -147,17 +233,17 @@ Hipertensi dapat dicegah dengan menjaga berat badan ideal, mengurangi konsumsi g
           </View>
 
           <SettingsItem
-            icon={icons.home} // Consider a more relevant icon
-            title="Berat Badan" // Changed from "berat"
+            icon={icons.home}
+            title="Berat Badan"
             onPress={() => { /* Navigate to edit weight screen or show modal */ }}
           />
           <SettingsItem
-            icon={icons.home} // Consider a more relevant icon
+            icon={icons.home}
             title="Tinggi Badan"
             onPress={() => { /* Navigate to edit height screen or show modal */ }}
           />
           <SettingsItem
-            icon={icons.home} // Consider a more relevant icon like a medical cross or clipboard
+            icon={icons.home}
             title="Penyakit Diderita"
             onPress={() => { /* Navigate to edit conditions screen or show modal */ }}
           />
@@ -176,7 +262,7 @@ Hipertensi dapat dicegah dengan menjaga berat badan ideal, mengurangi konsumsi g
             <SettingsItem
               icon={icons.login || icons.profile}
               title="Login"
-              textStyle="text-warning" // Assuming you have a warning color, or use another appropriate one
+              textStyle="text-warning"
               showArrow={false}
               onPress={() => router.push('/sign-in')}
             />

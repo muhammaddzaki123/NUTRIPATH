@@ -132,6 +132,27 @@ export const shareFoodRecallInChat = async (
     const recall = await getFoodRecallById(recallId);
     
     // Format the recall data as a message
+    const formatMeal = (meal: MealData) => {
+      const foods = [];
+      if (meal.carbs.name) {
+        foods.push(`Karbohidrat: ${meal.carbs.name} (${meal.carbs.amount} ${meal.carbs.unit})`);
+      }
+      const otherFoods = meal.others.filter(f => f.name).map(f => 
+        `- ${f.name} (${f.amount} ${f.unit})`
+      );
+      const snackFoods = meal.snacks.filter(f => f.name).map(f => 
+        `- ${f.name} (${f.amount} ${f.unit})`
+      );
+      
+      return [
+        ...foods,
+        otherFoods.length ? '\nLauk Pauk:' : '',
+        ...otherFoods,
+        snackFoods.length ? '\nSelingan:' : '',
+        ...snackFoods
+      ].join('\n');
+    };
+
     const recallSummary = `
 Food Recall Data:
 Nama: ${recall.name}
@@ -139,10 +160,19 @@ Usia: ${recall.age}
 Jenis Kelamin: ${recall.gender}
 Riwayat Penyakit: ${recall.disease}
 
-Makanan yang Melebihi Batas:
+=== Makan Pagi ===
+${formatMeal(recall.breakfast)}
+
+=== Makan Siang ===
+${formatMeal(recall.lunch)}
+
+=== Makan Malam ===
+${formatMeal(recall.dinner)}
+
+${recall.warningFoods.length ? `\n⚠️ Makanan yang Melebihi Batas:
 ${recall.warningFoods.map((food: FoodInput) => 
   `- ${food.name}: ${food.amount} ${food.unit}`
-).join('\n')}
+).join('\n')}` : ''}
     `.trim();
 
     // Send the message to chat

@@ -81,45 +81,74 @@ export default function WarningScreen() {
     <SafeAreaView className='bg-primary-400 h-full p-4'>
       <View className="flex-1 bg-primary-500 rounded-xl mt-5 mb-10" >
         {/* Header */}
-        <View className="flex-row items-center pt-5 border-b border-white pb-2 mb-4">
+        <View className="flex-row items-center pt-5 border-b border-white pb-2 mb-6">
           <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color={"white"} className='ml-2' />
+            <Ionicons name="arrow-back" size={24} color="white" className="ml-2" />
           </TouchableOpacity>
-          <Text className="text-white text-xl font-bold ml-4">WARNING</Text>
+          <Text className="text-white text-xl font-rubik-bold ml-4">PERINGATAN ASUPAN</Text>
           <TouchableOpacity onPress={() => router.back()} className="ml-auto">
             <Text className="text-3xl text-white mr-4">×</Text>
           </TouchableOpacity>
         </View>
 
-        <ScrollView className="flex-1 px-4 py-2">
-          <Text className="text-red-500 text-2xl font-bold text-center mb-6">
-            WARNING
-          </Text>
+        <ScrollView className="flex-1 px-6">
+          {/* Patient Data Section */}
+          <View className="mb-8">
+            <Text className="text-white text-2xl font-rubik-semibold mb-4">
+              Data Pasien:
+            </Text>
+            <View className="bg-white/10 rounded-3xl p-6">
+              <View className="space-y-3">
+                <Text className="text-white text-lg font-rubik">
+                  Nama: {params.name}
+                </Text>
+                <Text className="text-white text-lg font-rubik">
+                  Usia: {params.age}
+                </Text>
+                <Text className="text-white text-lg font-rubik">
+                  Jenis Kelamin: {params.gender}
+                </Text>
+                <Text className="text-white text-lg font-rubik">
+                  Riwayat Penyakit: {params.disease}
+                </Text>
+              </View>
+            </View>
+          </View>
 
-          {warningFoods.length > 0 ? (
-            <View className="space-y-3">
-              {warningFoods.map((food, index) => (
-                <View key={index} className="bg-white rounded-xl p-4">
-                  <Text className="text-red-500 text-base">
-                    {`${food.name} ${food.amount} ${food.unit}`}
-                  </Text>
+          {/* Warning Foods Section */}
+          <View className="mb-8">
+            <Text className="text-white text-2xl font-rubik-semibold mb-4">
+              Makanan yang Melebihi Batas:
+            </Text>
+            {warningFoods.length > 0 ? (
+              <View className="bg-white/10 rounded-3xl p-6">
+                <View className="space-y-3">
+                  {warningFoods.map((food, index) => (
+                    <View key={index} className="flex-row items-center">
+                      <View className="w-2 h-2 rounded-full bg-red-500 mr-3" />
+                      <Text className="text-white text-lg font-rubik">
+                        {food.name}: {food.amount} {food.unit}
+                      </Text>
+                    </View>
+                  ))}
                 </View>
-              ))}
-            </View>
-          ) : (
-            <View className="bg-white rounded-xl p-4">
-              <Text className="text-center text-gray-600">
-                Tidak ada makanan yang melebihi batas konsumsi
-              </Text>
-            </View>
-          )}
+              </View>
+            ) : (
+              <View className="bg-white/10 rounded-3xl p-6">
+                <Text className="text-white text-lg font-rubik text-center">
+                  Tidak ada makanan yang melebihi batas konsumsi
+                </Text>
+              </View>
+            )}
+          </View>
 
+          {/* Consultation Button */}
           <TouchableOpacity 
-            className="bg-white rounded-full py-3 px-6 mt-6 mb-4 items-center"
+            className="bg-white rounded-full py-4 px-6 mb-6 mx-4"
             onPress={handleSaveAndConsult}
           >
-            <Text className="text-[#40E0D0] font-semibold text-lg">
-              YUK KONSUL
+            <Text className="text-primary-500 text-xl font-rubik-bold text-center">
+              KONSULTASI DENGAN AHLI GIZI
             </Text>
           </TouchableOpacity>
         </ScrollView>

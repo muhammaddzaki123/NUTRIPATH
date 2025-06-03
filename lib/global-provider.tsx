@@ -15,6 +15,8 @@ interface User {
   email: string;
   avatar: string;
   userType: 'user' | 'nutritionist';
+  disease?: 'hipertensi' | 'diabetes' | 'kanker';
+  specialization?: 'hipertensi' | 'diabetes' | 'kanker';
 }
 
 const GlobalContext = createContext<GlobalContextType | undefined>(undefined);
