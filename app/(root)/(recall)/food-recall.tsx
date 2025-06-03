@@ -2,7 +2,6 @@ import { foodRestrictions, urtOptions } from '@/constants/food-restrictions';
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import * as React from 'react';
 import { useState } from 'react';
 import { SafeAreaView, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
@@ -52,10 +51,7 @@ const FoodInputRow = ({
         <Picker
           selectedValue={value.unit}
           onValueChange={(text: string) => onChange({ ...value, unit: text })}
-          style={{ height: 48,
-            paddingHorizontal: 10,
-            minWidth: 100,
-             backgroundColor: 'white' }}
+          style={{ height: 48, paddingHorizontal: 10, minWidth: 100, backgroundColor: 'white' }}
         >
           <Picker.Item label="URT" value="" />
           {urtOptions.map((unit: string) => 
@@ -145,10 +141,20 @@ export default function FoodRecallScreen() {
         return restriction && parseInt(food.amount) > restriction.maxAmount;
       });
 
+      // Get user data from previous screen params
+      const { name, age, gender } = params;
+
       router.push({
         pathname: '/warning',
         params: { 
-          warningFoods: JSON.stringify(warningFoods)
+          warningFoods: JSON.stringify(warningFoods),
+          name,
+          age,
+          gender,
+          disease,
+          breakfast: JSON.stringify(meals.breakfast),
+          lunch: JSON.stringify(meals.lunch),
+          dinner: JSON.stringify(meals.dinner)
         }
       });
     }
@@ -167,70 +173,69 @@ export default function FoodRecallScreen() {
   const currentMeal = meals[mealType];
 
   return (
-  <SafeAreaView className='bg-primary-400 h-full p-4'>
-    <View className="flex-1 bg-primary-500 rounded-xl mt-5 mb-10" >
-      {/* Custom Header */}
-       {/* Header */}
-      <View className="flex-row items-center pt-5 border-b border-white pb-2 mb-4">
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={"white"} className='ml-2' />
-        </TouchableOpacity>
-        <Text className="text-white text-xl font-bold  ml-4 ">RECALL</Text>
-        <TouchableOpacity onPress={() => router.back()} className="ml-auto">
-          <Text className="text-3xl text-white mr-4">×</Text>
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView className="flex-1 px-6 pb-5 mb-5 " >
-        <View className="space-y-8">
-          <Text className="text-white text-2xl font-semibold">
-            {mealType === 'breakfast' ? 'Makan Pagi' :
-             mealType === 'lunch' ? 'Makan Siang' : 'Makan Malam'}
-          </Text>
-
-          <View className="space-y-8">
-            <View>
-              <Text className="text-white text-lg font-medium mb-2">Nasi/karbohidrat :</Text>
-              <FoodInputRow
-                value={currentMeal.carbs}
-                onChange={(data) => updateFood(mealType, 'carbs', 0, data)}
-              />
-            </View>
-
-            <View>
-              <Text className="text-white text-lg font-medium mb-2">Lainnya :</Text>
-              {currentMeal.others.map((food: FoodInput, index: number) => (
-                <FoodInputRow
-                  key={`other-${index}`}
-                  value={food}
-                  onChange={(data) => updateFood(mealType, 'others', index, data)}
-                />
-              ))}
-            </View>
-
-            <View>
-              <Text className="text-white text-lg font-medium mb-2">Selingan :</Text>
-              {currentMeal.snacks.map((food: FoodInput, index: number) => (
-                <FoodInputRow
-                  key={`snack-${index}`}
-                  value={food}
-                  onChange={(data) => updateFood(mealType, 'snacks', index, data)}
-                />
-              ))}
-            </View>
-          </View>
+    <SafeAreaView className='bg-primary-400 h-full p-4'>
+      <View className="flex-1 bg-primary-500 rounded-xl mt-5 mb-10" >
+        {/* Header */}
+        <View className="flex-row items-center pt-5 border-b border-white pb-2 mb-4">
+          <TouchableOpacity onPress={handleBack}>
+            <Ionicons name="arrow-back" size={24} color={"white"} className='ml-2' />
+          </TouchableOpacity>
+          <Text className="text-white text-xl font-bold ml-4">RECALL</Text>
+          <TouchableOpacity onPress={() => router.back()} className="ml-auto">
+            <Text className="text-3xl text-white mr-4">×</Text>
+          </TouchableOpacity>
         </View>
 
-        <TouchableOpacity 
-          className="bg-white rounded-full py-4 px-6 mb-5  items-center shadow-lg"
-          onPress={handleNext}
-        >
-          <Text className="text-[#40E0D0] font-semibold text-lg">
-            {mealType === 'dinner' ? 'CEK ASUPAN' : 'NEXT'}
-          </Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </View>
+        <ScrollView className="flex-1 px-6 pb-5 mb-5">
+          <View className="space-y-8">
+            <Text className="text-white text-2xl font-semibold">
+              {mealType === 'breakfast' ? 'Makan Pagi' :
+               mealType === 'lunch' ? 'Makan Siang' : 'Makan Malam'}
+            </Text>
+
+            <View className="space-y-8">
+              <View>
+                <Text className="text-white text-lg font-medium mb-2">Nasi/karbohidrat :</Text>
+                <FoodInputRow
+                  value={currentMeal.carbs}
+                  onChange={(data) => updateFood(mealType, 'carbs', 0, data)}
+                />
+              </View>
+
+              <View>
+                <Text className="text-white text-lg font-medium mb-2">Lainnya :</Text>
+                {currentMeal.others.map((food: FoodInput, index: number) => (
+                  <FoodInputRow
+                    key={`other-${index}`}
+                    value={food}
+                    onChange={(data) => updateFood(mealType, 'others', index, data)}
+                  />
+                ))}
+              </View>
+
+              <View>
+                <Text className="text-white text-lg font-medium mb-2">Selingan :</Text>
+                {currentMeal.snacks.map((food: FoodInput, index: number) => (
+                  <FoodInputRow
+                    key={`snack-${index}`}
+                    value={food}
+                    onChange={(data) => updateFood(mealType, 'snacks', index, data)}
+                  />
+                ))}
+              </View>
+            </View>
+          </View>
+
+          <TouchableOpacity 
+            className="bg-white rounded-full py-4 px-6 mb-5 items-center shadow-lg"
+            onPress={handleNext}
+          >
+            <Text className="text-[#40E0D0] font-semibold text-lg">
+              {mealType === 'dinner' ? 'CEK ASUPAN' : 'NEXT'}
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }

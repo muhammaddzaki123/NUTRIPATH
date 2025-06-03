@@ -42,7 +42,7 @@ const Home = () => {
         />
         <TouchableOpacity onPress={() => setMenuVisible(!menuVisible)}>
           <Image 
-            source={{ uri: user?.avatar }} // Menampilkan avatar jika pengguna sudah login
+             source={user && user.avatar ? { uri: user.avatar } : icons.profile}// Menampilkan avatar jika pengguna sudah login
             className="w-10 h-10 rounded-full"
           />
         </TouchableOpacity>
@@ -66,7 +66,7 @@ const Home = () => {
                       router.push('/sign-in'); // Menuju halaman login
                     }}
                   >
-                    <Image source={icons.logout} className="w-6 h-6 mr-3" />
+                    <Image source={icons.login} className="w-6 h-6 mr-3" />
                     <Text className="text-lg font-semibold text-black">Login</Text>
                   </TouchableOpacity>
                 </>

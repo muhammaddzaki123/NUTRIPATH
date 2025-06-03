@@ -73,7 +73,7 @@ const Profile = () => {
         <View className="flex flex-row justify-center mt-5">
           <View className="flex flex-col items-center relative mt-5">
             <Image
-              source={{ uri: user?.avatar }}
+              source={user && user.avatar ? { uri: user.avatar } : icons.profile2}
               className="size-44 relative rounded-full"
             />
             <TouchableOpacity className="absolute bottom-11 right-2">
@@ -122,13 +122,25 @@ const Profile = () => {
         </View>
 
         <View className="flex flex-col border-t mt-5 pt-5 border-primary-200">
-          <SettingsItem
-            icon={icons.logout}
-            title="Logout"
-            textStyle="text-danger"
-            showArrow={false}
-            onPress={handleLogout}
-          />
+          {user ? (
+            // Jika pengguna sudah login, tampilkan tombol Logout
+            <SettingsItem
+              icon={icons.logout}
+              title="Logout"
+              textStyle="text-danger" 
+              showArrow={false}
+              onPress={handleLogout}
+            />
+          ) : (
+            // Jika pengguna belum login, tampilkan tombol Login
+            <SettingsItem
+              icon={icons.login || icons.profile} 
+              title="Login"
+              textStyle="text-warning"
+              showArrow={false} 
+              onPress={() => router.push('/sign-in')}
+            />
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
