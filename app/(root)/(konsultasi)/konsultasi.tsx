@@ -60,7 +60,7 @@ const KonsultasiScreen = () => {
           unreadCount,
           timestamp: lastMessage?.time || '',
           userName: userDetails?.name || `User ${userId}`,
-          userAvatar: userDetails?.avatar
+          userAvatar: userDetails?.avatar || `User ${user.avatar}`,
         };
       })
       .sort((a, b) => b.timestamp.localeCompare(a.timestamp));
