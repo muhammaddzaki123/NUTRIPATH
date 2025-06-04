@@ -43,6 +43,8 @@ export async function getCurrentUser() {
       return null;
     }
 
+    console.log("Fetching fresh data for user:", currentUser);
+
     // Fetch fresh user data from database
     let freshUserData;
     if (currentUser.userType === 'nutritionist') {
@@ -51,9 +53,11 @@ export async function getCurrentUser() {
         config.ahligiziCollectionId!,
         currentUser.$id
       );
+      console.log("Nutritionist data from DB:", response);
       freshUserData = {
         ...currentUser,
-        avatar: response.avatar || currentUser.avatar
+        avatar: response.avatar || currentUser.avatar,
+        specialization: response.specialization
       };
     } else {
       const response = await databases.getDocument(
@@ -61,9 +65,11 @@ export async function getCurrentUser() {
         config.usersProfileCollectionId!,
         currentUser.$id
       );
+      console.log("User data from DB:", response);
       freshUserData = {
         ...currentUser,
-        avatar: response.avatar || currentUser.avatar
+        avatar: response.avatar || currentUser.avatar,
+        disease: response.disease || null // Include disease information for users
       };
     }
 
@@ -73,6 +79,7 @@ export async function getCurrentUser() {
     return currentUser;
   } catch (error) {
     console.log("Error getting current user:", error);
+    console.error(error);
     return currentUser; // Return existing data if fetch fails
   }
 }
@@ -123,16 +130,20 @@ export async function loginUser(email: string, password: string) {
             );
           }
 
-          // Simpan data user yang login
+          // Simpan data user yang login dengan informasi lengkap
           currentUser = {
             $id: user.$id,
             name: user.name || email.split('@')[0],
             email: user.email,
-            avatar: avatar.getInitials(user.name || email.split('@')[0]).toString(),
-            userType: "user"
+            avatar: user.avatar || avatar.getInitials(user.name || email.split('@')[0]).toString(),
+            userType: "user",
+            disease: user.disease || null,
+            height: user.height || null,
+            weight: user.weight || null,
+            lastSeen: new Date().toISOString()
           };
 
-          console.log("Current user set to:", currentUser);
+          console.log("Setting current user with complete data:", currentUser);
         } catch (updateError) {
           console.error("Gagal update user type:", updateError);
         }
@@ -202,15 +213,16 @@ export async function loginNutritionist(email: string, password: string) {
             updateData
           );
 
-          // Simpan data nutritionist yang login
+          // Simpan data nutritionist yang login dengan informasi lengkap
           currentUser = {
             $id: nutritionist.$id,
             name: nutritionist.name || email.split('@')[0],
             email: nutritionist.email,
-            avatar: avatar.getInitials(nutritionist.name || email.split('@')[0]).toString(),
+            avatar: nutritionist.avatar || avatar.getInitials(nutritionist.name || email.split('@')[0]).toString(),
             userType: "nutritionist",
             specialization: nutritionist.specialization,
-            status: "online"
+            status: "online",
+            lastSeen: new Date().toISOString()
           };
 
           console.log("Current user (nutritionist) set to:", currentUser);

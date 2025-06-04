@@ -197,6 +197,16 @@ const Profile = () => {
 
         <View className="flex flex-col mt-5 border-t pt-5 border-primary-200">
           <View className="bg-primary-200 rounded-2xl p-5">
+            <Text>
+              <Text className="text-lg font-rubik-bold">Email: </Text>
+              <Text className="text-lg font-rubik-regular">
+                {user?.email}
+              </Text>
+            </Text>
+        </View>
+
+        <View className="flex flex-col mt-5 border-t pt-5 border-primary-200">
+          <View className="bg-primary-200 rounded-2xl p-5">
             <Text className="text-lg font-rubik-bold">ABOUT US: </Text>
             <Text className="text-lg font-rubik-regular text-wrap text-justify">
               Mynutripath hadir untuk mempermudah pencatatan dan pemantauan asupan gizi pasien secara real-time. Dengan sistem yang dirancang khusus, pasien dapat mencatat riwayat makan sehari-hari melalui fitur recall 24 jam, Aplikasi ini juga dilengkapi berbagai fitur seperti rencana diet yang didalamnya sudah terdapat contoh menu diet sehari yang dilengkapi juga dengan rekomendasi menu diet sehat yang disusun langsung oleh ahli gizi terpercaya, konsultasi langsung dengan ahli gizi, kalkulator indeks massa tubuh dan berat badan ideal yang sekaligus secara langsung anda dapat mengetahui status gizi anda, Serta artikel kesehatan terkini.
@@ -225,16 +235,6 @@ const Profile = () => {
             </View>
           </View>
         )}
-
-        <View className="flex flex-col mt-5 border-t pt-5 border-primary-200">
-          <View className="bg-primary-200 rounded-2xl p-5">
-            <Text>
-              <Text className="text-lg font-rubik-bold">Email: </Text>
-              <Text className="text-lg font-rubik-regular">
-                {user?.email}
-              </Text>
-            </Text>
-          </View>
 
           <SettingsItem
             icon={icons.home}
