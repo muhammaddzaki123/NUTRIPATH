@@ -13,12 +13,13 @@ export const config = {
   endpoint: process.env.EXPO_PUBLIC_APPWRITE_ENDPOINT,
   projectId: process.env.EXPO_PUBLIC_APPWRITE_PROJECT_ID,
   databaseId: process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID,
-  artikelCollectionId:process.env.EXPO_PUBLIC_APPWRITE_ARTIKEL_COLLECTION_ID,
+  artikelCollectionId: process.env.EXPO_PUBLIC_APPWRITE_ARTIKEL_COLLECTION_ID,
   foodRecallCollectionId: process.env.EXPO_PUBLIC_APPWRITE_FOOD_RECALL_COLLECTION_ID,
   usersProfileCollectionId: process.env.EXPO_PUBLIC_APPWRITE_USERS_PROFILE_COLLECTION_ID,
   ahligiziCollectionId: process.env.EXPO_PUBLIC_APPWRITE_AHLIGIZI_COLLECTION_ID,
   chatMessagesCollectionId: process.env.EXPO_PUBLIC_APPWRITE_CHAT_MESSAGES_COLLECTION_ID,
   nutritionistChatCollectionId: process.env.EXPO_PUBLIC_APPWRITE_NUTRITIONIST_CHAT_COLLECTION_ID,
+  storageBucketId: process.env.EXPO_PUBLIC_APPWRITE_STORAGE_BUCKET_ID || 'default',
 };
 
 export const client = new Client();
@@ -37,15 +38,42 @@ let currentUser: any = null;
 
 export async function getCurrentUser() {
   try {
-    if (currentUser) {
-      console.log("Returning current user:", currentUser);
-      return currentUser;
+    if (!currentUser) {
+      console.log("No current user found");
+      return null;
     }
-    console.log("No current user found");
-    return null;
+
+    // Fetch fresh user data from database
+    let freshUserData;
+    if (currentUser.userType === 'nutritionist') {
+      const response = await databases.getDocument(
+        config.databaseId!,
+        config.ahligiziCollectionId!,
+        currentUser.$id
+      );
+      freshUserData = {
+        ...currentUser,
+        avatar: response.avatar || currentUser.avatar
+      };
+    } else {
+      const response = await databases.getDocument(
+        config.databaseId!,
+        config.usersProfileCollectionId!,
+        currentUser.$id
+      );
+      freshUserData = {
+        ...currentUser,
+        avatar: response.avatar || currentUser.avatar
+      };
+    }
+
+    // Update currentUser with fresh data
+    currentUser = freshUserData;
+    console.log("Returning updated user:", currentUser);
+    return currentUser;
   } catch (error) {
     console.log("Error getting current user:", error);
-    return null;
+    return currentUser; // Return existing data if fetch fails
   }
 }
 

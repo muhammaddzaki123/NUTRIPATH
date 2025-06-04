@@ -1,9 +1,10 @@
-import { diseaseInformation } from "@/constants/data";
-import icons from "@/constants/icons";
-import { logout } from "@/lib/appwrite";
-import { useGlobalContext } from "@/lib/global-provider"; // Pastikan path ini benar
+import { diseaseInformation } from '@/constants/data';
+import icons from '@/constants/icons';
+import { config, databases, logout, storage } from '@/lib/appwrite';
+import { useGlobalContext } from '@/lib/global-provider';
+import * as ImagePicker from 'expo-image-picker';
 import { router } from "expo-router";
-import React, { useState } from "react"; // Impor React jika belum
+import { useState } from "react";
 import {
   Alert,
   Image,
@@ -49,10 +50,6 @@ const Profile = () => {
   const [isTextExpanded, setIsTextExpanded] = useState(false);
   const initialLinesToShow = 5;
 
-  // --- TAMBAHKAN LOG DI SINI ---
-  console.log("PROFILE SCREEN - Current user object:", JSON.stringify(user, null, 2));
-  // ------------------------------
-
   const handleLogout = async () => {
     const result = await logout();
     if (result) {
@@ -68,54 +65,113 @@ const Profile = () => {
     setIsTextExpanded(!isTextExpanded);
   };
 
+  const handleImagePick = async () => {
+    try {
+      // Request permission
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (status !== 'granted') {
+        Alert.alert("Permission Required", "You need to grant access to your photos to change profile picture.");
+        return;
+      }
+
+      // Launch image picker
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
+      });
+
+      if (!result.canceled) {
+        // Show loading
+        Alert.alert("Uploading...", "Please wait while we update your profile picture.");
+
+        // Create file object for Appwrite
+        const file = {
+          name: `avatar-${user?.$id}-${Date.now()}.jpg`,
+          type: 'image/jpeg',
+          uri: result.assets[0].uri,
+          size: await new Promise<number>((resolve) => {
+            fetch(result.assets[0].uri)
+              .then((response) => response.blob())
+              .then((blob) => resolve(blob.size))
+          })
+        };
+
+        // Upload to Appwrite Storage
+        const uploadedFile = await storage.createFile(
+          config.storageBucketId,
+          'unique()',
+          file
+        );
+
+        // Get file URL
+        const fileUrl = storage.getFileView(config.storageBucketId, uploadedFile.$id);
+        console.log('Generated avatar URL:', fileUrl.href);
+
+        try {
+          // Update user profile in database
+          if (user?.userType === 'nutritionist') {
+            console.log('Updating nutritionist profile:', user.$id);
+            const updated = await databases.updateDocument(
+              config.databaseId!,
+              config.ahligiziCollectionId!,
+              user.$id,
+              { avatar: fileUrl.href }
+            );
+            console.log('Nutritionist profile updated:', updated);
+          } else {
+            console.log('Updating user profile:', user!.$id);
+            const updated = await databases.updateDocument(
+              config.databaseId!,
+              config.usersProfileCollectionId!,
+              user!.$id,
+              { avatar: fileUrl.href }
+            );
+            console.log('User profile updated:', updated);
+          }
+
+          // Refresh user data
+          console.log('Refreshing user data...');
+          await refetch();
+          console.log('User data refreshed');
+        } catch (updateError) {
+          console.error('Error updating profile:', updateError);
+          throw updateError;
+        }
+
+        Alert.alert("Success", "Profile picture updated successfully!");
+      }
+    } catch (error) {
+      console.error('Error updating profile picture:', error);
+      Alert.alert("Error", "Failed to update profile picture. Please try again.");
+    }
+  };
+
   const getDiseaseInfo = () => {
     if (!user) {
-      console.log("PROFILE SCREEN - getDiseaseInfo: User is null or undefined.");
       return null;
     }
     
-    console.log("PROFILE SCREEN - getDiseaseInfo: User type is", user.userType);
-
-    if (user.userType === 'user') {
-      console.log("PROFILE SCREEN - getDiseaseInfo: User disease is", user.disease);
-      // Pengecekan lebih robust: pastikan user.disease ada dan berupa string sebelum .toLowerCase()
-      if (user.disease && typeof user.disease === 'string' && user.disease.toLowerCase() in diseaseInformation) {
-        console.log("PROFILE SCREEN - getDiseaseInfo: Found disease info for user:", user.disease.toLowerCase());
-        return diseaseInformation[user.disease.toLowerCase()];
-      } else {
-        console.log("PROFILE SCREEN - getDiseaseInfo: No disease info found for user. Disease value:", user.disease, "Attempted key (lowercase):", user.disease ? (typeof user.disease === 'string' ? user.disease.toLowerCase() : 'Not a string') : 'N/A');
-        console.log("PROFILE SCREEN - getDiseaseInfo: Available keys in diseaseInformation:", Object.keys(diseaseInformation));
-      }
+    if (user.userType === 'user' && user.disease && typeof user.disease === 'string' && user.disease.toLowerCase() in diseaseInformation) {
+      return diseaseInformation[user.disease.toLowerCase()];
     }
     
-    if (user.userType === 'nutritionist') {
-      console.log("PROFILE SCREEN - getDiseaseInfo: Nutritionist specialization is", user.specialization);
-      // Pengecekan lebih robust: pastikan user.specialization ada dan berupa string sebelum .toLowerCase()
-      if (user.specialization && typeof user.specialization === 'string' && user.specialization.toLowerCase() in diseaseInformation) {
-        console.log("PROFILE SCREEN - getDiseaseInfo: Found specialization info for nutritionist:", user.specialization.toLowerCase());
-        return diseaseInformation[user.specialization.toLowerCase()];
-      } else {
-        console.log("PROFILE SCREEN - getDiseaseInfo: No specialization info found for nutritionist. Specialization value:", user.specialization, "Attempted key (lowercase):", user.specialization ? (typeof user.specialization === 'string' ? user.specialization.toLowerCase() : 'Not a string') : 'N/A');
-        console.log("PROFILE SCREEN - getDiseaseInfo: Available keys in diseaseInformation:", Object.keys(diseaseInformation));
-      }
+    if (user.userType === 'nutritionist' && user.specialization && typeof user.specialization === 'string' && user.specialization.toLowerCase() in diseaseInformation) {
+      return diseaseInformation[user.specialization.toLowerCase()];
     }
     
-    console.log("PROFILE SCREEN - getDiseaseInfo: No matching condition or info found, returning null.");
     return null;
   };
 
   const diseaseInfo = getDiseaseInfo();
 
-  // --- TAMBAHKAN LOG DI SINI ---
-  console.log("PROFILE SCREEN - Value of diseaseInfo:", JSON.stringify(diseaseInfo, null, 2));
-  console.log("PROFILE SCREEN - Condition for rendering disease block (user && diseaseInfo):", (user && diseaseInfo) ? "TRUE" : "FALSE");
-  // ------------------------------
-
   return (
     <SafeAreaView className="h-full bg-primary-400">
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerClassName="pb-32 px-7" // Anda mungkin ingin menyesuaikan pb-32 jika kontennya banyak
+        contentContainerClassName="pb-32 px-7"
       >
         <View className="flex flex-row items-center justify-between mt-5">
           <Text className="text-xl font-rubik-bold">Profile</Text>
@@ -128,7 +184,10 @@ const Profile = () => {
               source={user && user.avatar ? { uri: user.avatar } : icons.profile2}
               className="size-44 relative rounded-full"
             />
-            <TouchableOpacity className="absolute bottom-11 right-2">
+            <TouchableOpacity 
+              className="absolute bottom-11 right-2"
+              onPress={handleImagePick}
+            >
               <Image source={icons.edit} className="size-9" />
             </TouchableOpacity>
 
@@ -145,7 +204,6 @@ const Profile = () => {
           </View>
         </View>
 
-        {/* Bagian Informasi Penyakit/Spesialisasi */}
         {user && diseaseInfo && (
           <View className="flex flex-col mt-5 border-t pt-5 border-primary-200">
             <View className="bg-primary-200 rounded-2xl p-5">
@@ -179,19 +237,19 @@ const Profile = () => {
           </View>
 
           <SettingsItem
-            icon={icons.home} // Pertimbangkan mengganti ikon ini
+            icon={icons.home}
             title="Berat Badan"
-            onPress={() => { /* Navigasi atau modal untuk edit berat badan */ }}
+            onPress={() => {}}
           />
           <SettingsItem
-            icon={icons.home} // Pertimbangkan mengganti ikon ini
+            icon={icons.home}
             title="Tinggi Badan"
-            onPress={() => { /* Navigasi atau modal untuk edit tinggi badan */ }}
+            onPress={() => {}}
           />
           <SettingsItem
-            icon={icons.home} // Pertimbangkan mengganti ikon ini
+            icon={icons.home}
             title="Penyakit Diderita"
-            onPress={() => { /* Navigasi atau modal untuk edit penyakit */ }}
+            onPress={() => {}}
           />
         </View>
 
@@ -206,7 +264,7 @@ const Profile = () => {
             />
           ) : (
             <SettingsItem
-              icon={icons.login || icons.profile} // Fallback ikon jika login tidak ada
+              icon={icons.login || icons.profile}
               title="Login"
               textStyle="text-warning"
               showArrow={false}
