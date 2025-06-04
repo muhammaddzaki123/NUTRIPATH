@@ -1,8 +1,9 @@
+import { diseaseInformation } from "@/constants/data";
 import icons from "@/constants/icons";
 import { logout } from "@/lib/appwrite";
-import { useGlobalContext } from "@/lib/global-provider";
+import { useGlobalContext } from "@/lib/global-provider"; // Pastikan path ini benar
 import { router } from "expo-router";
-import { useState } from "react";
+import React, { useState } from "react"; // Impor React jika belum
 import {
   Alert,
   Image,
@@ -21,94 +22,6 @@ interface SettingsItemProp {
   textStyle?: string;
   showArrow?: boolean;
 }
-
-// Define disease information type
-interface DiseaseInfo {
-  title: string;
-  description: string;
-}
-
-interface DiseaseInformation {
-  [key: string]: DiseaseInfo;
-}
-
-const diseaseInformation: DiseaseInformation = {
-  hipertensi: {
-    title: "Hipertensi",
-    description: `Hipertensi adalah kondisi di mana tekanan darah seseorang meningkat melebihi batas normal secara konsisten. Ini berarti tekanan darah pada dinding arteri (pembuluh darah) terlalu tinggi. Hipertensi sering disebut sebagai "silent killer" karena sering tidak memiliki gejala yang jelas. 
-
-Lebih Detail:
-Tekanan Darah:
-- Tekanan darah adalah kekuatan yang dihasilkan oleh aliran darah ketika memompa melalui pembuluh darah. 
-- Ada dua jenis tekanan darah: 
-  * Tekanan Sistolik: Tekanan saat jantung berkontraksi dan memompa darah. 
-  * Tekanan Diastolik: Tekanan saat jantung beristirahat di antara detak jantung. 
-
-Gejala:
-- Sakit kepala
-- Pusing
-- Pendarahan hidung
-- Mual dan muntah
-- Kelelahan
-- Pandangan kabur
-
-Pencegahan:
-- Kurangi konsumsi garam
-- Olahraga teratur
-- Hindari stres
-- Jaga berat badan ideal
-- Hindari rokok dan alkohol`
-  },
-  diabetes: {
-    title: "Diabetes",
-    description: `Diabetes adalah penyakit kronis yang terjadi ketika tubuh tidak dapat menghasilkan insulin yang cukup atau tidak dapat menggunakan insulin secara efektif. Insulin adalah hormon yang mengatur kadar gula darah.
-
-Lebih Detail:
-Tipe Diabetes:
-- Diabetes Tipe 1: Sistem kekebalan tubuh menyerang sel penghasil insulin
-- Diabetes Tipe 2: Tubuh tidak dapat menggunakan insulin dengan baik
-- Diabetes Gestasional: Terjadi selama kehamilan
-
-Gejala:
-- Sering haus dan buang air kecil
-- Mudah lelah
-- Penurunan berat badan
-- Luka yang sulit sembuh
-- Penglihatan kabur
-
-Pencegahan:
-- Makan makanan sehat
-- Kontrol berat badan
-- Olahraga teratur
-- Pantau kadar gula darah
-- Hindari makanan tinggi gula`
-  },
-  kanker: {
-    title: "Kanker",
-    description: `Kanker adalah penyakit yang terjadi ketika sel-sel abnormal dalam tubuh tumbuh tidak terkendali. Sel-sel ini dapat menyebar ke bagian tubuh lainnya melalui darah dan sistem limfatik.
-
-Lebih Detail:
-Jenis Kanker:
-- Karsinoma: Kanker yang dimulai di kulit atau jaringan
-- Sarkoma: Kanker di jaringan ikat
-- Leukemia: Kanker darah
-- Limfoma: Kanker sistem limfatik
-
-Gejala Umum:
-- Benjolan atau pertumbuhan tidak normal
-- Perubahan pada kulit
-- Perubahan kebiasaan buang air
-- Penurunan berat badan tidak wajar
-- Kelelahan berkepanjangan
-
-Pencegahan:
-- Hindari merokok
-- Makan makanan sehat
-- Olahraga teratur
-- Hindari paparan sinar UV berlebihan
-- Pemeriksaan rutin`
-  }
-};
 
 const SettingsItem = ({
   icon,
@@ -136,6 +49,10 @@ const Profile = () => {
   const [isTextExpanded, setIsTextExpanded] = useState(false);
   const initialLinesToShow = 5;
 
+  // --- TAMBAHKAN LOG DI SINI ---
+  console.log("PROFILE SCREEN - Current user object:", JSON.stringify(user, null, 2));
+  // ------------------------------
+
   const handleLogout = async () => {
     const result = await logout();
     if (result) {
@@ -151,28 +68,54 @@ const Profile = () => {
     setIsTextExpanded(!isTextExpanded);
   };
 
-  // Function to determine which disease information to show
   const getDiseaseInfo = () => {
-    if (!user) return null;
-    
-    if (user.userType === 'user' && user.disease && user.disease.toLowerCase() in diseaseInformation) {
-      return diseaseInformation[user.disease.toLowerCase()];
+    if (!user) {
+      console.log("PROFILE SCREEN - getDiseaseInfo: User is null or undefined.");
+      return null;
     }
     
-    if (user.userType === 'nutritionist' && user.specialization && user.specialization.toLowerCase() in diseaseInformation) {
-      return diseaseInformation[user.specialization.toLowerCase()];
+    console.log("PROFILE SCREEN - getDiseaseInfo: User type is", user.userType);
+
+    if (user.userType === 'user') {
+      console.log("PROFILE SCREEN - getDiseaseInfo: User disease is", user.disease);
+      // Pengecekan lebih robust: pastikan user.disease ada dan berupa string sebelum .toLowerCase()
+      if (user.disease && typeof user.disease === 'string' && user.disease.toLowerCase() in diseaseInformation) {
+        console.log("PROFILE SCREEN - getDiseaseInfo: Found disease info for user:", user.disease.toLowerCase());
+        return diseaseInformation[user.disease.toLowerCase()];
+      } else {
+        console.log("PROFILE SCREEN - getDiseaseInfo: No disease info found for user. Disease value:", user.disease, "Attempted key (lowercase):", user.disease ? (typeof user.disease === 'string' ? user.disease.toLowerCase() : 'Not a string') : 'N/A');
+        console.log("PROFILE SCREEN - getDiseaseInfo: Available keys in diseaseInformation:", Object.keys(diseaseInformation));
+      }
     }
     
+    if (user.userType === 'nutritionist') {
+      console.log("PROFILE SCREEN - getDiseaseInfo: Nutritionist specialization is", user.specialization);
+      // Pengecekan lebih robust: pastikan user.specialization ada dan berupa string sebelum .toLowerCase()
+      if (user.specialization && typeof user.specialization === 'string' && user.specialization.toLowerCase() in diseaseInformation) {
+        console.log("PROFILE SCREEN - getDiseaseInfo: Found specialization info for nutritionist:", user.specialization.toLowerCase());
+        return diseaseInformation[user.specialization.toLowerCase()];
+      } else {
+        console.log("PROFILE SCREEN - getDiseaseInfo: No specialization info found for nutritionist. Specialization value:", user.specialization, "Attempted key (lowercase):", user.specialization ? (typeof user.specialization === 'string' ? user.specialization.toLowerCase() : 'Not a string') : 'N/A');
+        console.log("PROFILE SCREEN - getDiseaseInfo: Available keys in diseaseInformation:", Object.keys(diseaseInformation));
+      }
+    }
+    
+    console.log("PROFILE SCREEN - getDiseaseInfo: No matching condition or info found, returning null.");
     return null;
   };
 
   const diseaseInfo = getDiseaseInfo();
 
+  // --- TAMBAHKAN LOG DI SINI ---
+  console.log("PROFILE SCREEN - Value of diseaseInfo:", JSON.stringify(diseaseInfo, null, 2));
+  console.log("PROFILE SCREEN - Condition for rendering disease block (user && diseaseInfo):", (user && diseaseInfo) ? "TRUE" : "FALSE");
+  // ------------------------------
+
   return (
     <SafeAreaView className="h-full bg-primary-400">
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerClassName="pb-32 px-7"
+        contentContainerClassName="pb-32 px-7" // Anda mungkin ingin menyesuaikan pb-32 jika kontennya banyak
       >
         <View className="flex flex-row items-center justify-between mt-5">
           <Text className="text-xl font-rubik-bold">Profile</Text>
@@ -202,10 +145,13 @@ const Profile = () => {
           </View>
         </View>
 
+        {/* Bagian Informasi Penyakit/Spesialisasi */}
         {user && diseaseInfo && (
           <View className="flex flex-col mt-5 border-t pt-5 border-primary-200">
             <View className="bg-primary-200 rounded-2xl p-5">
-              <Text className="text-lg font-rubik-bold">{diseaseInfo.title}:</Text>
+              <Text className="text-lg font-rubik-bold">
+                {user.userType === 'user' ? 'Informasi' : 'Spesialisasi'} {diseaseInfo.title}:
+              </Text>
               <Text
                 className="text-lg font-rubik-regular text-wrap text-justify"
                 numberOfLines={isTextExpanded ? undefined : initialLinesToShow}
@@ -233,19 +179,19 @@ const Profile = () => {
           </View>
 
           <SettingsItem
-            icon={icons.home}
+            icon={icons.home} // Pertimbangkan mengganti ikon ini
             title="Berat Badan"
-            onPress={() => { /* Navigate to edit weight screen or show modal */ }}
+            onPress={() => { /* Navigasi atau modal untuk edit berat badan */ }}
           />
           <SettingsItem
-            icon={icons.home}
+            icon={icons.home} // Pertimbangkan mengganti ikon ini
             title="Tinggi Badan"
-            onPress={() => { /* Navigate to edit height screen or show modal */ }}
+            onPress={() => { /* Navigasi atau modal untuk edit tinggi badan */ }}
           />
           <SettingsItem
-            icon={icons.home}
+            icon={icons.home} // Pertimbangkan mengganti ikon ini
             title="Penyakit Diderita"
-            onPress={() => { /* Navigate to edit conditions screen or show modal */ }}
+            onPress={() => { /* Navigasi atau modal untuk edit penyakit */ }}
           />
         </View>
 
@@ -260,7 +206,7 @@ const Profile = () => {
             />
           ) : (
             <SettingsItem
-              icon={icons.login || icons.profile}
+              icon={icons.login || icons.profile} // Fallback ikon jika login tidak ada
               title="Login"
               textStyle="text-warning"
               showArrow={false}
