@@ -3,7 +3,7 @@ import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, SafeAreaView, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { useGlobalContext } from '../../../lib/global-provider';
+import { useGlobalContext } from '@/lib/global-provider';
 
 interface UserData {
   name: string;

@@ -11,16 +11,18 @@ const DietPlan = () => {
   const [height, setHeight] = useState('');
   const [activityLevel, setActivityLevel] = useState('');
   const [disease, setDisease] = useState('');
-  const [bmr, setBmr] = useState({ mifflin: 0, harris: 0 });
-  const [tee, setTee] = useState({ mifflin: 0, harris: 0 });
+  // Hanya menyimpan Mifflin-St Jeor BMR
+  const [bmr, setBmr] = useState(0); 
+  // Hanya menyimpan Mifflin-St Jeor TEE
+  const [tee, setTee] = useState(0); 
   const [showResults, setShowResults] = useState(false);
 
   const activityLevels = [
-    { label: 'Sedentary (little or no exercise)', value: 1.2 },
-    { label: 'Lightly active (light exercise/sports 1-3 days/week)', value: 1.375 },
-    { label: 'Moderately active (moderate exercise/sports 3-5 days/week)', value: 1.55 },
-    { label: 'Very active (hard exercise/sports 6-7 days a week)', value: 1.725 },
-    { label: 'Super active (very hard exercise/physical job & exercise twice a day)', value: 1.9 },
+    { label: 'Kurang gerak (sedikit atau tidak berolahraga)', value: 1.2 },
+    { label: 'Aktifitas ringan (olahraga ringan/olahraga 1-3 hari/minggu)', value: 1.375 },
+    { label: 'Cukup aktif (olahraga/olahraga sedang 3-5 hari/minggu)', value: 1.55 },
+    { label: 'Sangat aktif (olahraga berat/olahraga 6-7 hari seminggu)', value: 1.725 },
+    { label: 'Super aktif (olahraga sangat keras/pekerjaan fisik & olahraga dua kali sehari)', value: 1.9 },
   ];
 
   const diseases = [
@@ -37,24 +39,15 @@ const DietPlan = () => {
     if (gender && !isNaN(w) && !isNaN(h) && !isNaN(a)) {
       // Mifflin-St Jeor Equation
       let mifflinBMR = gender === 'Laki-Laki' 
-        ? (10 * w) + (6.25 * h) - (5 * a) + 5
-        : (10 * w) + (6.25 * h) - (5 * a) - 161;
+        ? (10 * w) + (6.25 * h) - (5 * a) + 5 //laki laki
+        : (10 * w) + (6.25 * h) - (5 * a) - 161; //if perempuan
 
-      // Harris-Benedict Equation
-      let harrisBMR = gender === 'Laki-Laki'
-        ? 66.5 + (13.75 * w) + (5.003 * h) - (6.75 * a)
-        : 655.1 + (9.563 * w) + (1.850 * h) - (4.676 * a);
-
-      setBmr({
-        mifflin: parseFloat(mifflinBMR.toFixed(2)),
-        harris: parseFloat(harrisBMR.toFixed(2))
-      });
+      // Mengatur BMR hanya untuk Mifflin-St Jeor
+      setBmr(parseFloat(mifflinBMR.toFixed(2)));
 
       const activityMultiplier = parseFloat(activityLevel);
-      setTee({
-        mifflin: parseFloat((mifflinBMR * activityMultiplier).toFixed(2)),
-        harris: parseFloat((harrisBMR * activityMultiplier).toFixed(2))
-      });
+      // Mengatur TEE hanya untuk Mifflin-St Jeor
+      setTee(parseFloat((mifflinBMR * activityMultiplier).toFixed(2)));
 
       setShowResults(true);
     }
@@ -172,16 +165,14 @@ const DietPlan = () => {
         {showResults && (
           <View className="mb-4">
             <Text className="text-white font-bold mb-2">Results :</Text>
-            <Text className="text-white mb-1">BMR :</Text>
+            <Text className="text-white mb-1">BMR (Mifflin - St Jeor) :</Text>
             <View className="bg-white p-3 rounded-lg mb-2">
-              <Text>Mifflin - St Jeor : {bmr.mifflin} kcal/day</Text>
-              <Text>Harris-Benedict : {bmr.harris} kcal/day</Text>
+              <Text>{bmr} kcal/day</Text>
             </View>
             
-            <Text className="text-white mb-1">TEE Berdasarkan Tingkat Aktivitas Level :</Text>
+            <Text className="text-white mb-1">TEE Berdasarkan Tingkat Aktivitas Level (Mifflin - St Jeor) :</Text>
             <View className="bg-white p-3 rounded-lg">
-              <Text>Mifflin - St Jeor : {tee.mifflin} kcal/day</Text>
-              <Text>Harris-Benedict : {tee.harris} kcal/day</Text>
+              <Text>{tee} kcal/day</Text>
             </View>
           </View>
         )}
@@ -203,7 +194,7 @@ const DietPlan = () => {
                 pathname: "/diet-recommendations",
                 params: {
                   disease: disease,
-                  calories: tee.mifflin.toString()
+                  calories: tee.toString()
                 }
               });
             }}
