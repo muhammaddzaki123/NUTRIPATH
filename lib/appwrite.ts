@@ -140,6 +140,8 @@ export async function loginUser(email: string, password: string) {
             disease: user.disease || null,
             height: user.height || null,
             weight: user.weight || null,
+            age: user.age || null,
+            gender: user.gender || null,
             lastSeen: new Date().toISOString()
           };
 
@@ -468,6 +470,38 @@ export const getChatMessages = async (chatId: string): Promise<Message[]> => {
     })) as Message[];
   } catch (error) {
     console.error('Error getting chat messages:', error);
+    throw error;
+  }
+}
+
+export async function updateUserProfile(userId: string, data: {
+  name?: string;
+  age?: string;
+  gender?: string;
+  disease?: string;
+}) {
+  try {
+    console.log("Updating user profile:", { userId, data });
+    
+    const response = await databases.updateDocument(
+      config.databaseId!,
+      config.usersProfileCollectionId!,
+      userId,
+      data
+    );
+
+    // Update currentUser with new data
+    if (currentUser && currentUser.$id === userId) {
+      currentUser = {
+        ...currentUser,
+        ...data
+      };
+    }
+
+    console.log("User profile updated successfully:", response);
+    return response;
+  } catch (error) {
+    console.error("Error updating user profile:", error);
     throw error;
   }
 }

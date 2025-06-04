@@ -2,7 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, SafeAreaView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, SafeAreaView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { updateUserProfile } from '@/lib/appwrite';
 import { useGlobalContext } from '@/lib/global-provider';
 
 interface UserData {
@@ -21,30 +22,66 @@ const diseases = [
 
 export default function RecallScreen() {
   const router = useRouter();
-  const { user } = useGlobalContext();
+  const { user, refetch } = useGlobalContext();
+  const [isUpdating, setIsUpdating] = useState(false);
   const [userData, setUserData] = useState<UserData>({
     name: user?.name || '',
-    age: '',
-    gender: '',
-    disease: 'Pilih penyakit',
+    age: user?.age || '',
+    gender: user?.gender || '',
+    disease: user?.disease ? user.disease.charAt(0).toUpperCase() + user.disease.slice(1) : 'Pilih penyakit',
   });
 
-  const handleNext = () => {
+  const handleUpdateProfile = async (newData: Partial<UserData>) => {
+    if (!user) return;
+    
+    try {
+      setIsUpdating(true);
+      await updateUserProfile(user.$id, newData);
+      await refetch(); // Refresh global context
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      Alert.alert('Error', 'Gagal menyimpan perubahan');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleNext = async () => {
     if (!userData.name || !userData.age || !userData.gender || userData.disease === 'Pilih penyakit') {
       Alert.alert('Error', 'Mohon lengkapi semua data');
       return;
     }
 
-    // Navigate to food recall with user data
-    router.push({
-      pathname: '/food-recall',
-      params: {
-        name: userData.name,
-        age: userData.age,
-        gender: userData.gender,
-        disease: userData.disease.toLowerCase()
+    try {
+      setIsUpdating(true);
+      
+      // Update user profile in database
+      if (user) {
+        await updateUserProfile(user.$id, {
+          name: userData.name,
+          age: userData.age,
+          gender: userData.gender,
+          disease: userData.disease.toLowerCase()
+        });
+        await refetch(); // Refresh global context
       }
-    });
+
+      // Navigate to food recall with user data
+      router.push({
+        pathname: '/food-recall',
+        params: {
+          name: userData.name,
+          age: userData.age,
+          gender: userData.gender,
+          disease: userData.disease.toLowerCase()
+        }
+      });
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      Alert.alert('Error', 'Gagal menyimpan perubahan');
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   return (
@@ -64,6 +101,12 @@ export default function RecallScreen() {
         {/* Form Content */}
         <View className="flex-1 px-6 pt-6">
           <View className="space-y-6">
+            {isUpdating && (
+              <View className="absolute inset-0 bg-black/30 items-center justify-center z-50">
+                <ActivityIndicator size="large" color="#ffffff" />
+              </View>
+            )}
+
             {/* Nama */}
             <View>
               <Text className="text-white text-xl font-rubik-semibold mb-2">Nama :</Text>
@@ -71,7 +114,10 @@ export default function RecallScreen() {
                 className="w-full bg-white rounded-3xl px-4 py-4 text-base min-h-[60px] font-rubik"
                 placeholder="Masukkan nama"
                 value={userData.name}
-                onChangeText={(text) => setUserData({...userData, name: text})}
+                onChangeText={(text) => {
+                  setUserData({...userData, name: text});
+                  handleUpdateProfile({ name: text });
+                }}
               />
             </View>
 
@@ -84,7 +130,10 @@ export default function RecallScreen() {
                   placeholder="Usia"
                   keyboardType="numeric"
                   value={userData.age}
-                  onChangeText={(text) => setUserData({...userData, age: text})}
+                  onChangeText={(text) => {
+                    setUserData({...userData, age: text});
+                    handleUpdateProfile({ age: text });
+                  }}
                 />
               </View>
               <View className="flex-[0.6] ml-2">
@@ -92,7 +141,10 @@ export default function RecallScreen() {
                 <View className="bg-white rounded-3xl overflow-hidden min-h-[60px] shadow-sm">
                   <Picker
                     selectedValue={userData.gender}
-                    onValueChange={(value) => setUserData({...userData, gender: value})}
+                    onValueChange={(value) => {
+                      setUserData({...userData, gender: value});
+                      handleUpdateProfile({ gender: value });
+                    }}
                     className="h-[60px] bg-white font-rubik"
                   >
                     <Picker.Item label="Pilih" value="" />
@@ -109,7 +161,12 @@ export default function RecallScreen() {
               <View className="bg-white rounded-3xl overflow-hidden min-h-[60px] shadow-sm">
                 <Picker
                   selectedValue={userData.disease}
-                  onValueChange={(value) => setUserData({...userData, disease: value})}
+                  onValueChange={(value) => {
+                    setUserData({...userData, disease: value});
+                    if (value !== 'Pilih penyakit') {
+                      handleUpdateProfile({ disease: value.toLowerCase() });
+                    }
+                  }}
                   className="h-[60px] bg-white font-rubik"
                 >
                   {diseases.map((disease) => (

@@ -1,4 +1,4 @@
-import React, { createContext, ReactNode, useContext } from "react";
+import { createContext, ReactNode, useContext } from "react";
 import { getCurrentUser } from "./appwrite";
 import { useAppwrite } from "./useAppwrite";
 
@@ -17,6 +17,8 @@ interface User {
   userType: 'user' | 'nutritionist';
   disease?: 'hipertensi' | 'diabetes' | 'kanker';
   specialization?: 'hipertensi' | 'diabetes' | 'kanker';
+  age?: string;
+  gender?: string;
 }
 
 const GlobalContext = createContext<GlobalContextType | undefined>(undefined);

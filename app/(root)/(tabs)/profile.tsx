@@ -236,21 +236,6 @@ const Profile = () => {
           </View>
         )}
 
-          <SettingsItem
-            icon={icons.home}
-            title="Berat Badan"
-            onPress={() => {}}
-          />
-          <SettingsItem
-            icon={icons.home}
-            title="Tinggi Badan"
-            onPress={() => {}}
-          />
-          <SettingsItem
-            icon={icons.home}
-            title="Penyakit Diderita"
-            onPress={() => {}}
-          />
         </View>
 
         <View className="flex flex-col border-t mt-5 pt-5 border-primary-200">
