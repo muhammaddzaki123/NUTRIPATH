@@ -24,6 +24,13 @@ interface SettingsItemProp {
   showArrow?: boolean;
 }
 
+const ProfileDetailItem = ({ label, value }: { label: string; value: string | number | undefined }) => (
+  <View className="flex-row items-center py-2">
+    <Text className="text-lg font-rubik-bold w-32">{label}:</Text>
+    <Text className="text-lg font-rubik-regular">{value ?? 'Tidak ada'}</Text>
+  </View>
+);
+
 const SettingsItem = ({
   icon,
   title,
@@ -67,7 +74,6 @@ const Profile = () => {
 
   const handleImagePick = async () => {
     try {
-      // Request permission
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       
       if (status !== 'granted') {
@@ -75,7 +81,6 @@ const Profile = () => {
         return;
       }
 
-      // Launch image picker
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
@@ -84,10 +89,8 @@ const Profile = () => {
       });
 
       if (!result.canceled) {
-        // Show loading
         Alert.alert("Uploading...", "Please wait while we update your profile picture.");
 
-        // Create file object for Appwrite
         const file = {
           name: `avatar-${user?.$id}-${Date.now()}.jpg`,
           type: 'image/jpeg',
@@ -99,19 +102,16 @@ const Profile = () => {
           })
         };
 
-        // Upload to Appwrite Storage
         const uploadedFile = await storage.createFile(
           config.storageBucketId,
           'unique()',
           file
         );
 
-        // Get file URL
         const fileUrl = storage.getFileView(config.storageBucketId, uploadedFile.$id);
         console.log('Generated avatar URL:', fileUrl.href);
 
         try {
-          // Update user profile in database
           if (user?.userType === 'nutritionist') {
             console.log('Updating nutritionist profile:', user.$id);
             const updated = await databases.updateDocument(
@@ -132,7 +132,6 @@ const Profile = () => {
             console.log('User profile updated:', updated);
           }
 
-          // Refresh user data
           console.log('Refreshing user data...');
           await refetch();
           console.log('User data refreshed');
@@ -203,7 +202,27 @@ const Profile = () => {
                 {user?.email}
               </Text>
             </Text>
+          </View>
         </View>
+
+        {user && (
+          <View className="flex flex-col mt-5 border-t pt-5 border-primary-200">
+            <View className="bg-primary-200 rounded-2xl p-5">
+              {user.userType === 'user' ? (
+                <>
+                  <ProfileDetailItem label="Umur" value={user.age} />
+                  <ProfileDetailItem label="Jenis Kelamin" value={user.gender} />
+                  <ProfileDetailItem label="Penyakit" value={user.disease} />
+                </>
+              ) : (
+                <>
+                  <ProfileDetailItem label="Spesialisasi" value={user.specialization} />
+                  <ProfileDetailItem label="Jenis Kelamin" value={user.gender} />
+                </>
+              )}
+            </View>
+          </View>
+        )}
 
         <View className="flex flex-col mt-5 border-t pt-5 border-primary-200">
           <View className="bg-primary-200 rounded-2xl p-5">
@@ -236,8 +255,6 @@ const Profile = () => {
           </View>
         )}
 
-        </View>
-
         <View className="flex flex-col border-t mt-5 pt-5 border-primary-200">
           {user ? (
             <SettingsItem
@@ -263,3 +280,4 @@ const Profile = () => {
 };
 
 export default Profile;
+
