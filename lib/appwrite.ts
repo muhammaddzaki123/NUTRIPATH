@@ -19,8 +19,8 @@ export const config = {
   ahligiziCollectionId: process.env.EXPO_PUBLIC_APPWRITE_AHLIGIZI_COLLECTION_ID,
   chatMessagesCollectionId: process.env.EXPO_PUBLIC_APPWRITE_CHAT_MESSAGES_COLLECTION_ID,
   nutritionistChatCollectionId: process.env.EXPO_PUBLIC_APPWRITE_NUTRITIONIST_CHAT_COLLECTION_ID,
-  notificationsCollectionId: process.env.EXPO_PUBLIC_APPWRITE_NOTIFICATIONS_COLLECTION_ID,
   storageBucketId: process.env.EXPO_PUBLIC_APPWRITE_STORAGE_BUCKET_ID || 'default',
+  notificationsCollectionId: process.env.EXPO_PUBLIC_APPWRITE_NOTIFICATION_COLLECTION_ID,
 };
 
 export const client = new Client();
@@ -225,7 +225,8 @@ export async function loginNutritionist(email: string, password: string) {
             userType: "nutritionist",
             specialization: nutritionist.specialization,
             status: "online",
-            lastSeen: new Date().toISOString()
+            lastSeen: new Date().toISOString(),
+            gender: nutritionist.gender || null,
           };
 
           console.log("Current user (nutritionist) set to:", currentUser);
@@ -534,5 +535,71 @@ export async function subscribeToChat(
   } catch (error) {
     console.error('Error setting up chat subscription:', error);
     throw new Error(`Failed to setup chat subscription: ${error}`);
+  }
+}
+
+// Notification Functions
+export async function createNotification(notificationData: {
+  userId: string;
+  type: 'chat' | 'article' | 'recall';
+  title: string;
+  description: string;
+  read?: boolean;
+}) {
+  try {
+    const payload = {
+      userId: notificationData.userId,
+      type: notificationData.type,
+      title: notificationData.title,
+      description: notificationData.description,
+      timestamp: new Date().toISOString(),
+      read: notificationData.read ?? false,
+    };
+    
+    const response = await databases.createDocument(
+      config.databaseId!,
+      config.notificationsCollectionId!,
+      'unique()',
+      payload
+    );
+    console.log('Notification created successfully:', response);
+    return response;
+  } catch (error) {
+    console.error('Error creating notification:', error);
+    throw error;
+  }
+}
+
+export async function getNotifications(userId: string) {
+  try {
+    const result = await databases.listDocuments(
+      config.databaseId!,
+      config.notificationsCollectionId!,
+      [
+        Query.equal('userId', userId),
+        Query.orderDesc('$createdAt')
+      ]
+    );
+    console.log('Notifications found:', result.documents.length);
+    return result.documents;
+  } catch (error) {
+    console.error('Error fetching notifications:', error);
+    throw error;
+  }
+}
+
+export async function markNotificationAsRead(notificationId: string) {
+  try {
+    const response = await databases.updateDocument(
+      config.databaseId!,
+      config.notificationsCollectionId!,
+      notificationId,
+      { read: true }
+    );
+    console.log('Notification marked as read:', response);
+    return response;
+  } catch (error) {
+    console.error('Error marking notification as read:', error);
+    throw error;
   }
 }

@@ -194,16 +194,18 @@ const Profile = () => {
           </View>
         </View>
 
-        <View className="flex flex-col mt-5 border-t pt-5 border-primary-200">
-          <View className="bg-primary-200 rounded-2xl p-5">
-            <Text>
-              <Text className="text-lg font-rubik-bold">Email: </Text>
-              <Text className="text-lg font-rubik-regular">
-                {user?.email}
+        {user && (
+          <View className="flex flex-col mt-5 border-t pt-5 border-primary-200">
+            <View className="bg-primary-200 rounded-2xl p-5">
+              <Text>
+                <Text className="text-lg font-rubik-bold">Email: </Text>
+                <Text className="text-lg font-rubik-regular">
+                  {user?.email}
+                </Text>
               </Text>
-            </Text>
+            </View>
           </View>
-        </View>
+        )}
 
         {user && (
           <View className="flex flex-col mt-5 border-t pt-5 border-primary-200">
@@ -280,4 +282,3 @@ const Profile = () => {
 };
 
 export default Profile;
-

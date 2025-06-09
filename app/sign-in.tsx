@@ -92,36 +92,40 @@ export default function SignIn() {
           </View>
 
           {/* Login Form */}
-          <View className="space-y-2 ">
+          <View className="space-y-2">
             <TextInput
               placeholder="Email"
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
-              className="border border-gray-300 rounded-md px-4 py-3 text-base"
+              className="border border-gray-300 rounded-md px-4 py-3 text-base bg-white"
             />
             <TextInput
               placeholder="Password"
               value={password}
               onChangeText={setPassword}
               secureTextEntry
-              className="border border-gray-300 rounded-md px-4 py-3 text-base mt-3"
+              className="border border-gray-300 rounded-md px-4 py-3 text-base mt-3 bg-white"
             />
-            <View className="border border-gray-300 rounded-md px-4 py-3 mt-3">
-              <Picker
-                selectedValue={userType}
-                onValueChange={(itemValue: string) => setUserType(itemValue)}
-              >
-                <Picker.Item label="User" value="user" />
-                <Picker.Item label="Ahli Gizi" value="nutritionist" />
-              </Picker>
+            <View className="mt-3">
+              <Text className="text-gray-500 text-sm mb-1 ml-1">Tipe Pengguna</Text>
+              <View className="border border-gray-300 rounded-md bg-white">
+                <Picker
+                  selectedValue={userType}
+                  onValueChange={(itemValue: string) => setUserType(itemValue)}
+                  style={{ height: 50 }}
+                >
+                  <Picker.Item label="User" value="user" />
+                  <Picker.Item label="Ahli Gizi" value="nutritionist" />
+                </Picker>
+              </View>
             </View>
             <TouchableOpacity
               onPress={handleLogin}
               className="bg-[#1CD6CE] rounded-full py-4 items-center mt-3"
             >
-              <Text className="text-white text-lg font-rubik-medium mt-3">
+              <Text className="text-white text-lg font-rubik-medium">
                 Login
               </Text>
             </TouchableOpacity>
