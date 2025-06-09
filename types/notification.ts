@@ -18,6 +18,8 @@ export interface Notification {
 export interface NotificationParams {
   unreadMessages: { [key: string]: number };
   nutritionists: Nutritionist[];
+  page?: number;
+  pageSize?: number;
 }
 
 export interface NotificationItemProps {
@@ -27,4 +29,6 @@ export interface NotificationItemProps {
   description: string;
   timestamp: string;
   onPress: () => void;
+  onDelete: () => void;
+  read?: boolean;
 }

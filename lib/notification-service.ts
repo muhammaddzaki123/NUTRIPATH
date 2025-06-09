@@ -1,6 +1,6 @@
-import { Notification, NotificationParams } from '@/types/notification';
 import { Models } from 'react-native-appwrite';
-import { createNotification, getNotifications as getAppwriteNotifications, markNotificationAsRead } from './appwrite';
+import { Notification, NotificationParams } from '@/types/notification';
+import { createNotification, deleteNotificationFromDB, getNotifications as getAppwriteNotifications, markNotificationAsRead } from './appwrite';
 
 export const getNotifications = async (params: NotificationParams): Promise<Notification[]> => {
   try {
@@ -30,10 +30,13 @@ export const getNotifications = async (params: NotificationParams): Promise<Noti
 
     // Get notifications from Appwrite and merge them
     try {
-      // Get the first nutritionist's userId as a fallback if needed
       const userId = params.nutritionists[0]?.userId;
       if (userId) {
-        const appwriteNotifications = await getAppwriteNotifications(userId);
+        const appwriteNotifications = await getAppwriteNotifications(
+          userId,
+          params.page,
+          params.pageSize
+        );
         appwriteNotifications.forEach((doc: Models.Document) => {
           notifications.push({
             $id: doc.$id,
@@ -49,7 +52,6 @@ export const getNotifications = async (params: NotificationParams): Promise<Noti
       }
     } catch (error) {
       console.error('Error fetching Appwrite notifications:', error);
-      // Continue with unread messages notifications even if Appwrite fetch fails
     }
 
     // Sort notifications by timestamp, newest first
@@ -67,6 +69,38 @@ export const markAsRead = async (notificationId: string) => {
     return await markNotificationAsRead(notificationId);
   } catch (error) {
     console.error('Error in markAsRead:', error);
+    throw error;
+  }
+};
+
+export const markAllAsRead = async (userId: string) => {
+  try {
+    // Get all unread notifications
+    const notifications = await getNotifications({
+      unreadMessages: {},
+      nutritionists: [],
+      page: 1,
+      pageSize: 1000
+    });
+    
+    // Mark each notification as read
+    const promises = notifications
+      .filter(n => !n.read)
+      .map(n => markAsRead(n.$id));
+    
+    await Promise.all(promises);
+    return true;
+  } catch (error) {
+    console.error('Error in markAllAsRead:', error);
+    throw error;
+  }
+};
+
+export const deleteNotification = async (notificationId: string) => {
+  try {
+    return await deleteNotificationFromDB(notificationId);
+  } catch (error) {
+    console.error('Error in deleteNotification:', error);
     throw error;
   }
 };
