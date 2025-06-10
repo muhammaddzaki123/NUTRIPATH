@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router'
-import React from 'react'
 import { Image, Text, View } from 'react-native'
+import { GestureHandlerRootView } from 'react-native-gesture-handler'
 
 import icons from '@/constants/icons'
 
@@ -20,7 +20,8 @@ const TabIcon = ({ focused, icon, title }: { focused: boolean; icon: any; title:
 
 const TabsLayout = () => {
   return (
-    <Tabs
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <Tabs
         screenOptions={{
             tabBarShowLabel: false,
             tabBarStyle: {
@@ -61,7 +62,8 @@ const TabsLayout = () => {
         )
     }}
 />
-    </Tabs>
+      </Tabs>
+    </GestureHandlerRootView>
   )
 }
 

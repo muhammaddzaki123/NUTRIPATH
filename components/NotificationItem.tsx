@@ -1,8 +1,8 @@
 import { FontAwesome } from '@expo/vector-icons';
-import { format } from 'date-fns';
 import React, { useRef } from 'react';
 import { Animated, Text, TouchableOpacity, View } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
+import { formatTimestamp } from '../utils/date';
 
 export interface NotificationItemProps {
   id: string;
@@ -37,7 +37,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
   onDelete,
   read = false,
 }) => {
-  const formattedTime = format(new Date(timestamp), 'HH:mm, dd MMM yyyy');
+  const formattedTime = formatTimestamp(timestamp);
   const icon = getIcon(type);
   
   // Animation for opening/closing

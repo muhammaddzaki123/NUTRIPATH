@@ -1,5 +1,5 @@
 import { Redirect, Stack, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useChat } from '../../../components/ChatContext';
@@ -10,52 +10,13 @@ import { type Notification } from '../../../types/notification';
 
 const PAGE_SIZE = 10;
 
-const formatTimestamp = (timestamp: string | number | Date): string => {
-  try {
-    let date: Date;
-    
-    if (timestamp instanceof Date) {
-      date = timestamp;
-    } else if (typeof timestamp === 'string') {
-      // Try parsing as ISO string first
-      date = new Date(timestamp);
-      
-      // If invalid, try parsing as Unix timestamp
-      if (isNaN(date.getTime())) {
-        const unixTimestamp = parseInt(timestamp);
-        date = new Date(unixTimestamp * 1000);
-      }
-    } else {
-      // Assume Unix timestamp in seconds
-      date = new Date(timestamp * 1000);
-    }
-
-    // Validate the resulting date
-    if (isNaN(date.getTime())) {
-      throw new Error('Invalid date');
-    }
-
-    // Format the date
-    return date.toLocaleDateString('id-ID', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  } catch (error) {
-    console.error('Error formatting timestamp:', error, timestamp);
-    return new Date().toLocaleDateString('id-ID', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  }
-};
+import { formatTimestamp } from '../../../utils/date';
 
 export default function NotificationScreen() {
   const router = useRouter();
   const { unreadMessages, nutritionists } = useChat();
   const { user } = useGlobalContext();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifications, setNotifications] = useState<Array<Notification>>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(1);
@@ -152,7 +113,7 @@ export default function NotificationScreen() {
   const handleDelete = async (id: string) => {
     try {
       await deleteNotification(id);
-      setNotifications(prev => prev.filter(n => n.$id !== id));
+      setNotifications((prev: Array<Notification>) => prev.filter(n => n.$id !== id));
     } catch (error) {
       console.error('Error deleting notification:', error);
     }
@@ -162,7 +123,7 @@ export default function NotificationScreen() {
     try {
       if (!user) return;
       await markAllAsRead(user.$id);
-      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      setNotifications((prev: Array<Notification>) => prev.map(n => ({ ...n, read: true })));
     } catch (error) {
       console.error('Error marking all as read:', error);
     }
@@ -184,7 +145,7 @@ export default function NotificationScreen() {
   );
 
   // Group notifications by date
-  const groupedNotifications = notifications.reduce((groups: { [key: string]: Notification[] }, notification) => {
+  const groupedNotifications: { [key: string]: Array<Notification> } = notifications.reduce((groups: { [key: string]: Array<Notification> }, notification: Notification) => {
     const date = formatTimestamp(notification.timestamp);
     if (!groups[date]) {
       groups[date] = [];
