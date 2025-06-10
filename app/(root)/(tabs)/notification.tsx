@@ -1,14 +1,55 @@
-import { useChat } from '@/components/ChatContext';
-import NotificationItem from '@/components/NotificationItem';
-import { useGlobalContext } from '@/lib/global-provider';
-import { deleteNotification, getNotifications, markAllAsRead, markAsRead } from '@/lib/notification-service';
-import { type Notification } from '@/types/notification';
 import { Redirect, Stack, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useChat } from '../../../components/ChatContext';
+import NotificationItem from '../../../components/NotificationItem';
+import { useGlobalContext } from '../../../lib/global-provider';
+import { deleteNotification, getNotifications, markAllAsRead, markAsRead } from '../../../lib/notification-service';
+import { type Notification } from '../../../types/notification';
 
 const PAGE_SIZE = 10;
+
+const formatTimestamp = (timestamp: string | number | Date): string => {
+  try {
+    let date: Date;
+    
+    if (timestamp instanceof Date) {
+      date = timestamp;
+    } else if (typeof timestamp === 'string') {
+      // Try parsing as ISO string first
+      date = new Date(timestamp);
+      
+      // If invalid, try parsing as Unix timestamp
+      if (isNaN(date.getTime())) {
+        const unixTimestamp = parseInt(timestamp);
+        date = new Date(unixTimestamp * 1000);
+      }
+    } else {
+      // Assume Unix timestamp in seconds
+      date = new Date(timestamp * 1000);
+    }
+
+    // Validate the resulting date
+    if (isNaN(date.getTime())) {
+      throw new Error('Invalid date');
+    }
+
+    // Format the date
+    return date.toLocaleDateString('id-ID', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  } catch (error) {
+    console.error('Error formatting timestamp:', error, timestamp);
+    return new Date().toLocaleDateString('id-ID', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  }
+};
 
 export default function NotificationScreen() {
   const router = useRouter();
@@ -55,7 +96,7 @@ export default function NotificationScreen() {
 
   useEffect(() => {
     fetchNotifications();
-  }, [unreadMessages, nutritionists, filterType]);
+  }, [unreadMessages, nutritionists, filterType, user]);
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -75,7 +116,7 @@ export default function NotificationScreen() {
     try {
       if (!notification.read) {
         await markAsRead(notification.$id);
-        setNotifications(prev =>
+        setNotifications(prev => 
           prev.map(n => n.$id === notification.$id ? { ...n, read: true } : n)
         );
       }
@@ -143,14 +184,14 @@ export default function NotificationScreen() {
   );
 
   // Group notifications by date
-  const groupedNotifications = notifications.reduce((groups, notification) => {
-    const date = new Date(notification.timestamp).toLocaleDateString();
+  const groupedNotifications = notifications.reduce((groups: { [key: string]: Notification[] }, notification) => {
+    const date = formatTimestamp(notification.timestamp);
     if (!groups[date]) {
       groups[date] = [];
     }
     groups[date].push(notification);
     return groups;
-  }, {} as { [key: string]: Notification[] });
+  }, {});
 
   if (!user) {
     return <Redirect href="/sign-in" />;
@@ -207,14 +248,14 @@ export default function NotificationScreen() {
               <Text className="px-4 py-2 bg-gray-100 font-rubik-medium text-gray-600">
                 {date}
               </Text>
-              {dateNotifications.map(notification => (
+              {dateNotifications.map((notification: Notification) => (
                 <NotificationItem
                   key={notification.$id}
                   id={notification.$id}
                   type={notification.type}
                   title={notification.title}
                   description={notification.description}
-                  timestamp={notification.timestamp}
+                  timestamp={formatTimestamp(notification.timestamp)}
                   read={notification.read}
                   onPress={() => handleNotificationPress(notification)}
                   onDelete={() => handleDelete(notification.$id)}

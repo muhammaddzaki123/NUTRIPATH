@@ -2,8 +2,6 @@ import { Query } from 'react-native-appwrite';
 import {
   CreateNotificationParams,
   Notification,
-  NotificationData,
-  NotificationDocument,
   NotificationParams,
   NotificationType
 } from '../types/notification';
@@ -34,37 +32,45 @@ export const getNotifications = async (params: NotificationParams): Promise<Noti
 
     // Enrich notifications with additional data
     for (const doc of appwriteNotifications.documents) {
-      // Convert Appwrite document to our NotificationDocument type
-      const notification: NotificationDocument = {
-        $id: doc.$id,
-        $createdAt: doc.$createdAt,
-        $updatedAt: doc.$updatedAt,
-        $collectionId: doc.$collectionId,
-        $databaseId: doc.$databaseId,
-        $permissions: doc.$permissions,
-        userId: doc.userId,
-        type: doc.type as NotificationType,
-        title: doc.title,
-        description: doc.description,
-        timestamp: doc.timestamp,
-        read: doc.read || false,
-        data: doc.data as NotificationData
-      };
-      
-      // Enrich recall notifications with recall data if needed
-      if (notification.type === 'recall' && notification.data?.recallId) {
+      try {
+        // Parse the stringified data
+        let parsedData = null;
         try {
-          const recallData = await getFoodRecallById(notification.data.recallId);
-          notification.data = {
-            ...notification.data,
-            recallData
-          };
-        } catch (error) {
-          console.error('Error fetching recall data:', error);
+          parsedData = doc.data ? JSON.parse(doc.data as string) : null;
+        } catch (parseError) {
+          console.error('Error parsing notification data:', parseError);
+          parsedData = null;
         }
-      }
+        
+        // Convert Appwrite document to our Notification type
+        const notification: Notification = {
+          $id: doc.$id,
+          userId: doc.userId,
+          type: doc.type as NotificationType,
+          title: doc.title,
+          description: doc.description,
+          timestamp: doc.timestamp || new Date().toISOString(),
+          read: doc.read || false,
+          data: parsedData
+        };
 
-      notifications.push(notification);
+        // Enrich recall notifications with recall data if needed
+        if (notification.type === 'recall' && notification.data?.recallId) {
+          try {
+            const recallData = await getFoodRecallById(notification.data.recallId);
+            notification.data = {
+              ...notification.data,
+              recallData
+            };
+          } catch (error) {
+            console.error('Error fetching recall data:', error);
+          }
+        }
+
+        notifications.push(notification);
+      } catch (error) {
+        console.error('Error processing notification:', error);
+      }
     }
 
     return notifications;
@@ -88,7 +94,7 @@ export const createNotification = async (params: CreateNotificationParams): Prom
         description: params.description,
         timestamp: new Date().toISOString(),
         read: params.read || false,
-        data: params.data || {}
+        data: params.data ? JSON.stringify(params.data) : '{}'
       }
     );
   } catch (error) {
