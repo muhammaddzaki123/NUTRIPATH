@@ -48,7 +48,10 @@ export const sendMessage = async (message: SendMessageData, senderType: 'user' |
       throw new Error('Data pesan tidak lengkap');
     }
 
-    // Check for recent duplicate messages
+    // Generate unique message hash
+    const messageHash = `${message.chatId}-${message.text.trim()}-${senderType}-${Date.now()}`;
+    
+    // Enhanced duplicate check with shorter window
     const recentMessages = await databases.listDocuments(
       config.databaseId!,
       config.chatMessagesCollectionId!,
@@ -57,16 +60,16 @@ export const sendMessage = async (message: SendMessageData, senderType: 'user' |
         Query.equal('text', message.text.trim()),
         Query.equal('sender', senderType),
         Query.orderDesc('time'),
-        Query.limit(1)
+        Query.limit(2)
       ]
     );
 
-    // If a duplicate message was sent in the last 5 seconds, don't send again
+    // Stricter duplicate prevention (3 second window)
     if (recentMessages.documents.length > 0) {
       const lastMessage = recentMessages.documents[0] as Message;
       const timeDiff = Date.now() - new Date(lastMessage.time).getTime();
-      if (timeDiff < 5000) { // 5 seconds
-        console.log('Preventing duplicate message:', message.text);
+      if (timeDiff < 3000) { // 3 seconds
+        console.log('Preventing duplicate message. Hash:', messageHash);
         return lastMessage;
       }
     }
@@ -92,7 +95,9 @@ export const sendMessage = async (message: SendMessageData, senderType: 'user' |
         text: message.text.trim(),
         sender: senderType,
         time: timestamp,
-        read: false
+        read: false,
+        messageHash, // Store message hash for additional duplicate checking
+        processedAt: Date.now() // Add processing timestamp
       }
     );
 

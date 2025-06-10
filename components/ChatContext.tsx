@@ -6,8 +6,6 @@ import {
   UnreadMessageState,
   User
 } from '@/constants//chat';
-import { useGlobalContext } from '@/lib/global-provider';
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import {
   getChatMessages,
   getNutritionistChats,
@@ -20,6 +18,8 @@ import {
   subscribeToNutritionistChats,
   updateNutritionistStatus
 } from '@/lib/chat-service';
+import { useGlobalContext } from '@/lib/global-provider';
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
@@ -60,16 +60,18 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     
     setMessages((prev: MessageState) => {
       const chatMessages = prev[chatId] || [];
-      const messageExists = chatMessages.some((msg: Message) => msg.$id === enrichedMessage.$id);
       
-      if (messageExists) {
-        const updatedMessages = chatMessages.map((msg: Message) =>
-          msg.$id === enrichedMessage.$id ? enrichedMessage : msg
-        );
-        return {
-          ...prev,
-          [chatId]: updatedMessages
-        };
+      // Enhanced duplicate check
+      const isDuplicate = chatMessages.some((msg: Message) => 
+        msg.$id === enrichedMessage.$id || 
+        (msg.text === enrichedMessage.text && 
+         msg.sender === enrichedMessage.sender &&
+         Math.abs(new Date(msg.time).getTime() - new Date(enrichedMessage.time).getTime()) < 1000)
+      );
+      
+      if (isDuplicate) {
+        console.log('Duplicate message detected:', enrichedMessage.$id);
+        return prev;
       }
       
       return {
@@ -135,14 +137,22 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     let unsubscribe: (() => void) | undefined;
     let isSubscribed = true;
     
-    const setupSubscription = async () => {
-      try {
-        console.log('Setting up subscription for chat:', currentChat);
+  const setupSubscription = async () => {
+    try {
+      console.log('Setting up subscription for chat:', currentChat);
+      
+      // Track processed message IDs to prevent duplicates
+      const processedMessageIds = new Set<string>();
+      
+      unsubscribe = await subscribeToChat(currentChat, async (newMessage: Message) => {
+        if (!isSubscribed || processedMessageIds.has(newMessage.$id)) return;
         
-        unsubscribe = await subscribeToChat(currentChat, async (newMessage: Message) => {
-          if (!isSubscribed) return;
-          console.log('Received message:', newMessage);
-          await updateMessages(newMessage.chatId, newMessage);
+        console.log('Processing new message:', newMessage.$id);
+        processedMessageIds.add(newMessage.$id);
+        
+        // Debounce message processing
+        await new Promise(resolve => setTimeout(resolve, 100));
+        await updateMessages(newMessage.chatId, newMessage);
 
           // Update unread count for messages from the other party
           if (user.userType === 'nutritionist' && newMessage.sender === 'user' ||
