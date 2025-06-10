@@ -1,18 +1,31 @@
 import { Redirect, Stack, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import type { ReactElement } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  FlatList,
+  RefreshControl,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useChat } from '../../../components/ChatContext';
-import NotificationItem from '../../../components/NotificationItem';
-import { useGlobalContext } from '../../../lib/global-provider';
-import { deleteNotification, getNotifications, markAllAsRead, markAsRead } from '../../../lib/notification-service';
-import { type Notification } from '../../../types/notification';
+import { useChat } from '@/components/ChatContext';
+import NotificationItem from '@/components/NotificationItem';
+import { useGlobalContext } from '@/lib/global-provider';
+import { deleteNotification, getNotifications, markAllAsRead, markAsRead } from '@/lib/notification-service';
+import type { Notification } from '@/types/notification';
+import { formatTimestamp } from '@/utils/date';
 
 const PAGE_SIZE = 10;
 
-import { formatTimestamp } from '../../../utils/date';
+interface NotificationGroup {
+  date: string;
+  notifications: Notification[];
+}
 
-export default function NotificationScreen() {
+export default function NotificationScreen(): ReactElement {
   const router = useRouter();
   const { unreadMessages, nutritionists } = useChat();
   const { user } = useGlobalContext();
@@ -22,11 +35,15 @@ export default function NotificationScreen() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [filterType, setFilterType] = useState<'all' | 'chat' | 'article' | 'recall'>('all');
+  const [lastFetchTime, setLastFetchTime] = useState<number>(0);
 
-  const fetchNotifications = async (pageNum = 1, shouldRefresh = false) => {
+  const fetchNotifications = async (pageNum = 1, shouldRefresh = false): Promise<void> => {
+    // Prevent multiple fetches within 500ms
+    const now = Date.now();
+    if (now - lastFetchTime < 500 || !user) return;
+    setLastFetchTime(now);
+
     try {
-      if (!user) return;
-      
       const notifs = await getNotifications({
         userId: user.$id,
         unreadMessages,
@@ -35,18 +52,23 @@ export default function NotificationScreen() {
         pageSize: PAGE_SIZE
       });
 
-      // Filter notifications based on selected type
       const filteredNotifs = filterType === 'all' 
         ? notifs 
-        : notifs.filter(n => n.type === filterType);
+        : notifs.filter((n: Notification) => n.type === filterType);
 
-      if (shouldRefresh) {
-        setNotifications(filteredNotifs);
-      } else {
-        setNotifications(prev => [...prev, ...filteredNotifs]);
-      }
+      setNotifications((prev: Array<Notification>) => {
+        if (shouldRefresh) return filteredNotifs;
+        
+        // Remove duplicates based on $id
+        const existingIds = new Set(prev.map((n: Notification) => n.$id));
+        const newNotifs = filteredNotifs.filter((n: Notification) => !existingIds.has(n.$id));
+        return [...prev, ...newNotifs];
+      });
 
       setHasMore(notifs.length === PAGE_SIZE);
+      if (!shouldRefresh) {
+        setPage(pageNum);
+      }
     } catch (error) {
       console.error('Error fetching notifications:', error);
     } finally {
@@ -56,29 +78,53 @@ export default function NotificationScreen() {
   };
 
   useEffect(() => {
-    fetchNotifications();
-  }, [unreadMessages, nutritionists, filterType, user]);
+    let mounted = true;
+    let timeoutId: ReturnType<typeof setTimeout>;
 
-  const handleRefresh = () => {
+    const init = () => {
+      if (!user || !mounted) return;
+      
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+
+      timeoutId = setTimeout(() => {
+        if (mounted) {
+          setPage(1);
+          fetchNotifications(1, true);
+        }
+      }, 500);
+    };
+
+    init();
+
+    return () => {
+      mounted = false;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [user?.$id, filterType]);
+
+  const handleRefresh = (): void => {
+    if (refreshing) return;
     setRefreshing(true);
-    setPage(1);
     fetchNotifications(1, true);
   };
 
-  const loadMore = () => {
-    if (hasMore && !loading) {
-      const nextPage = page + 1;
-      setPage(nextPage);
-      fetchNotifications(nextPage);
-    }
+  const loadMore = (): void => {
+    if (!hasMore || loading || refreshing) return;
+    fetchNotifications(page + 1);
   };
 
-  const handleNotificationPress = async (notification: Notification) => {
+  const handleNotificationPress = async (notification: Notification): Promise<void> => {
     try {
       if (!notification.read) {
         await markAsRead(notification.$id);
-        setNotifications(prev => 
-          prev.map(n => n.$id === notification.$id ? { ...n, read: true } : n)
+        setNotifications((prev: Array<Notification>) => 
+          prev.map((n: Notification) => 
+            n.$id === notification.$id ? { ...n, read: true } : n
+          )
         );
       }
 
@@ -110,27 +156,32 @@ export default function NotificationScreen() {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string): Promise<void> => {
     try {
       await deleteNotification(id);
-      setNotifications((prev: Array<Notification>) => prev.filter(n => n.$id !== id));
+      setNotifications((prev: Array<Notification>) => 
+        prev.filter((n: Notification) => n.$id !== id)
+      );
     } catch (error) {
       console.error('Error deleting notification:', error);
     }
   };
 
-  const handleMarkAllAsRead = async () => {
+  const handleMarkAllAsRead = async (): Promise<void> => {
+    if (!user) return;
     try {
-      if (!user) return;
       await markAllAsRead(user.$id);
-      setNotifications((prev: Array<Notification>) => prev.map(n => ({ ...n, read: true })));
+      setNotifications((prev: Array<Notification>) => 
+        prev.map((n: Notification) => ({ ...n, read: true }))
+      );
     } catch (error) {
       console.error('Error marking all as read:', error);
     }
   };
 
-  const renderFilterButton = (type: 'all' | 'chat' | 'article' | 'recall', label: string) => (
+  const renderFilterButton = (type: 'all' | 'chat' | 'article' | 'recall', label: string): ReactElement => (
     <TouchableOpacity
+      key={type}
       onPress={() => setFilterType(type)}
       className={`px-4 py-2 rounded-full mr-2 ${
         filterType === type ? 'bg-blue-500' : 'bg-gray-200'
@@ -144,21 +195,37 @@ export default function NotificationScreen() {
     </TouchableOpacity>
   );
 
-  // Group notifications by date
-  const groupedNotifications: { [key: string]: Array<Notification> } = notifications.reduce((groups: { [key: string]: Array<Notification> }, notification: Notification) => {
-    const date = formatTimestamp(notification.timestamp);
-    if (!groups[date]) {
-      groups[date] = [];
-    }
-    groups[date].push(notification);
-    return groups;
-  }, {});
+  // Memoize grouped notifications
+  const groupedData = useMemo(() => {
+    const groups: { [key: string]: Array<Notification> } = {};
+    
+    // Sort notifications by timestamp (newest first)
+    const sortedNotifications = [...notifications].sort((a: Notification, b: Notification) => 
+      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
+
+    // Group by date and ensure no duplicates
+    sortedNotifications.forEach((notification: Notification) => {
+      const date = formatTimestamp(notification.timestamp);
+      if (!groups[date]) {
+        groups[date] = [];
+      }
+      if (!groups[date].some((n: Notification) => n.$id === notification.$id)) {
+        groups[date].push(notification);
+      }
+    });
+
+    return Object.entries(groups).map(([date, notifications]) => ({
+      date,
+      notifications
+    }));
+  }, [notifications]);
 
   if (!user) {
     return <Redirect href="/sign-in" />;
   }
 
-  if (loading) {
+  if (loading && !refreshing && notifications.length === 0) {
     return (
       <View className="flex-1 justify-center items-center bg-gray-50">
         <ActivityIndicator size="large" color="#1CD6CE" />
@@ -168,11 +235,8 @@ export default function NotificationScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
-      <Stack.Screen 
-        options={{
-          headerShown: false
-        }}
-      />
+      <Stack.Screen options={{ headerShown: false }} />
+      
       <View className="px-4 py-4 bg-white border-b border-gray-200">
         <View className="flex-row justify-between items-center mb-4">
           <Text className="text-2xl font-rubik-bold text-gray-900">
@@ -202,16 +266,16 @@ export default function NotificationScreen() {
         </View>
       ) : (
         <FlatList
-          data={Object.entries(groupedNotifications)}
-          keyExtractor={([date]) => date}
-          renderItem={({ item: [date, dateNotifications] }) => (
+          data={groupedData}
+          keyExtractor={(item: NotificationGroup) => item.date}
+          renderItem={({ item }: { item: NotificationGroup }) => (
             <View>
               <Text className="px-4 py-2 bg-gray-100 font-rubik-medium text-gray-600">
-                {date}
+                {item.date}
               </Text>
-              {dateNotifications.map((notification: Notification) => (
+              {item.notifications.map((notification: Notification) => (
                 <NotificationItem
-                  key={notification.$id}
+                  key={`${item.date}-${notification.$id}`}
                   id={notification.$id}
                   type={notification.type}
                   title={notification.title}
@@ -234,7 +298,7 @@ export default function NotificationScreen() {
           }
           onEndReached={loadMore}
           onEndReachedThreshold={0.5}
-          contentContainerStyle={notifications.length === 0 && { flex: 1 }}
+          contentContainerStyle={notifications.length === 0 ? { flex: 1 } : undefined}
           className="flex-1"
         />
       )}
