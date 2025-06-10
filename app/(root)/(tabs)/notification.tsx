@@ -1,9 +1,11 @@
+/// <reference lib="dom" />
 import { Redirect, Stack, useRouter } from 'expo-router';
 import type { ReactElement } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Platform,
   RefreshControl,
   ScrollView,
   Text,
@@ -11,12 +13,12 @@ import {
   View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useChat } from '@/components/ChatContext';
-import NotificationItem from '@/components/NotificationItem';
-import { useGlobalContext } from '@/lib/global-provider';
-import { deleteNotification, getNotifications, markAllAsRead, markAsRead } from '@/lib/notification-service';
-import type { Notification } from '@/types/notification';
-import { formatTimestamp } from '@/utils/date';
+import { useChat } from '../../../components/ChatContext';
+import NotificationItem from '../../../components/NotificationItem';
+import { useGlobalContext } from '../../../lib/global-provider';
+import { deleteNotification, getNotifications, markAllAsRead, markAsRead } from '../../../lib/notification-service';
+import type { Notification } from '../../../types/notification';
+import { formatTimestamp } from '../../../utils/date';
 
 const PAGE_SIZE = 10;
 
@@ -44,6 +46,10 @@ export default function NotificationScreen(): ReactElement {
     setLastFetchTime(now);
 
     try {
+      // Log fetch attempt for debugging
+      if (Platform.OS !== 'web') {
+        console.log(`Fetching notifications: page ${pageNum}, refresh: ${shouldRefresh}`);
+      }
       const notifs = await getNotifications({
         userId: user.$id,
         unreadMessages,
@@ -130,11 +136,48 @@ export default function NotificationScreen(): ReactElement {
 
       switch (notification.type) {
         case 'chat':
-          if (notification.data?.chatId) {
+          if (!notification.data || !user) break;
+
+          try {
+            // Parse notification data
+            const notifData = typeof notification.data === 'string' 
+              ? JSON.parse(notification.data) 
+              : notification.data;
+
+            // Validasi data yang diperlukan
+            if (!notifData?.chatId) {
+              if (Platform.OS !== 'web') {
+                console.warn('Chat ID tidak ditemukan dalam notifikasi:', notification.data);
+              }
+              break;
+            }
+
+            // Extract chatId from notification
+            const chatId = notifData?.chatId;
+            if (!chatId) {
+              if (Platform.OS !== 'web') {
+                console.warn('[Chat] Failed:', {
+                  reason: 'missing_chat_id',
+                  notification: notification.$id
+                });
+              }
+              break;
+            }
+
+            // Debug log
+            if (Platform.OS !== 'web') {
+              console.log('[Chat] Opening:', chatId);
+            }
+
+            // Route to chat
             router.push({
               pathname: "/(root)/(konsultasi)/chat/[id]",
-              params: { id: notification.data.chatId }
+              params: { id: chatId }
             });
+          } catch (err) {
+            if (Platform.OS !== 'web') {
+              console.warn('Chat routing error:', err);
+            }
           }
           break;
         case 'article':

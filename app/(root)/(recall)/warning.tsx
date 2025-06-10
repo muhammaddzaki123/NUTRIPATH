@@ -1,9 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { getNutritionists } from '@/lib/appwrite';
+import { useGlobalContext } from '@/lib/global-provider';
+import { saveFoodRecall, shareFoodRecallInChat } from '@/lib/recall-service';
 import { Alert, SafeAreaView, ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import { getNutritionists } from '../../../lib/appwrite';
-import { useGlobalContext } from '../../../lib/global-provider';
-import { saveFoodRecall, shareFoodRecallInChat } from '../../../lib/recall-service';
 
 type FoodWarning = {
   name: string;
@@ -42,7 +42,8 @@ export default function WarningScreen() {
         breakfast: JSON.parse(params.breakfast as string),
         lunch: JSON.parse(params.lunch as string),
         dinner: JSON.parse(params.dinner as string),
-        warningFoods
+        warningFoods,
+        status: 'pending' as const
       };
 
       const savedRecall = await saveFoodRecall(recallData);
@@ -62,7 +63,8 @@ export default function WarningScreen() {
           savedRecall.$id,
           chatId,
           user.$id,
-          matchingNutritionist.$id
+          matchingNutritionist.$id,
+          user.name || user.email.split('@')[0]
         );
 
         // Navigate to chat

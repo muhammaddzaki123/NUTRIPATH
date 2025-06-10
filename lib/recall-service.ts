@@ -1,4 +1,4 @@
-import { Models, Query } from 'react-native-appwrite';
+import { Query } from 'react-native-appwrite';
 import { config, databases } from './appwrite';
 import { createChatNotification, createRecallNotification } from './notification-service';
 
@@ -31,7 +31,13 @@ export interface RecallData {
   status: 'pending' | 'reviewed' | 'needs_update';
 }
 
-interface RecallDocument extends Models.Document {
+interface RecallDocument {
+  $id: string;
+  $createdAt: string;
+  $updatedAt: string;
+  $permissions: string[];
+  $collectionId: string;
+  $databaseId: string;
   userId: string;
   name: string;
   age: string;
@@ -206,7 +212,10 @@ ${recall.warningFoods.map((food: FoodInput) =>
     await createRecallNotification(
       userId,
       recallId,
-      recall,
+      {
+        name: recall.name,
+        disease: recall.disease
+      },
       nutritionistId
     );
 
@@ -230,7 +239,7 @@ export const getUserFoodRecalls = async (userId: string) => {
     );
     
     // Parse stringified data and check for recalls needing review
-    const recalls = response.documents.map(doc => {
+    const recalls = response.documents.map((doc: RecallDocument) => {
       const recall = {
         ...doc,
         breakfast: JSON.parse(doc.breakfast),
@@ -247,7 +256,10 @@ export const getUserFoodRecalls = async (userId: string) => {
           createRecallNotification(
             userId,
             doc.$id,
-            recall,
+            {
+              name: doc.name,
+              disease: doc.disease
+            },
             doc.nutritionistId
           ).catch(console.error);
         }
@@ -311,7 +323,10 @@ export const updateRecallStatus = async (
     await createRecallNotification(
       recall.userId,
       recallId,
-      recall,
+      {
+        name: recall.name,
+        disease: recall.disease
+      },
       nutritionistId
     );
 
