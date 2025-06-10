@@ -1,20 +1,20 @@
 import { useChat } from '@/components/ChatContext';
-import { useGlobalContext } from '@/lib/global-provider';
 import { Message, Nutritionist } from '@/constants/chat';
+import { useGlobalContext } from '@/lib/global-provider';
 import { FontAwesome } from '@expo/vector-icons';
 import { Link, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState, useMemo } from 'react';
-import { 
-  ActivityIndicator, 
-  Image, 
-  KeyboardAvoidingView, 
-  Platform, 
-  ScrollView, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  View,
-  Alert 
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
