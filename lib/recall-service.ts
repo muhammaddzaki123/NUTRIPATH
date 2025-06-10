@@ -1,5 +1,6 @@
 import { Models, Query } from 'react-native-appwrite';
 import { config, databases } from './appwrite';
+import { createChatNotification, createRecallNotification } from './notification-service';
 
 export interface FoodInput {
   name: string;
@@ -24,6 +25,10 @@ export interface RecallData {
   dinner: MealData;
   warningFoods: FoodInput[];
   createdAt?: string;
+  lastReviewDate?: string;
+  nextReviewDate?: string;
+  nutritionistId?: string;
+  status: 'pending' | 'reviewed' | 'needs_update';
 }
 
 interface RecallDocument extends Models.Document {
@@ -37,11 +42,14 @@ interface RecallDocument extends Models.Document {
   dinner: string;
   warningFoods: string;
   createdAt: string;
-  sharedInChat?: boolean;
+  lastReviewDate?: string;
+  nextReviewDate?: string;
   nutritionistId?: string;
+  status: 'pending' | 'reviewed' | 'needs_update';
+  sharedInChat?: boolean;
 }
 
-// Save food recall data to database
+// Save food recall data to database with enhanced notification
 export const saveFoodRecall = async (data: Omit<RecallData, 'createdAt'>) => {
   try {
     console.log('Saving food recall data:', data);
@@ -53,7 +61,8 @@ export const saveFoodRecall = async (data: Omit<RecallData, 'createdAt'>) => {
       lunch: JSON.stringify(data.lunch),
       dinner: JSON.stringify(data.dinner),
       warningFoods: JSON.stringify(data.warningFoods),
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      status: 'pending' as const
     };
 
     const response = await databases.createDocument(
@@ -63,6 +72,29 @@ export const saveFoodRecall = async (data: Omit<RecallData, 'createdAt'>) => {
       documentData
     );
 
+    // Create notification for the user
+    await createRecallNotification(
+      data.userId,
+      response.$id,
+      {
+        name: data.name,
+        disease: data.disease
+      }
+    );
+
+    // If user has a nutritionist assigned, notify them as well
+    if (data.nutritionistId) {
+      await createRecallNotification(
+        data.userId,
+        response.$id,
+        {
+          name: data.name,
+          disease: data.disease
+        },
+        data.nutritionistId
+      );
+    }
+
     console.log('Food recall data saved successfully:', response);
     return response;
   } catch (error) {
@@ -71,61 +103,13 @@ export const saveFoodRecall = async (data: Omit<RecallData, 'createdAt'>) => {
   }
 };
 
-// Get food recall history for a user
-export const getUserFoodRecalls = async (userId: string) => {
-  try {
-    const response = await databases.listDocuments<RecallDocument>(
-      config.databaseId!,
-      config.foodRecallCollectionId!,
-      [
-        Query.equal('userId', userId),
-        Query.orderDesc('createdAt')
-      ]
-    );
-    
-    // Parse stringified data
-    return response.documents.map(doc => ({
-      ...doc,
-      breakfast: JSON.parse(doc.breakfast),
-      lunch: JSON.parse(doc.lunch),
-      dinner: JSON.parse(doc.dinner),
-      warningFoods: JSON.parse(doc.warningFoods)
-    }));
-  } catch (error) {
-    console.error('Error getting user food recalls:', error);
-    throw error;
-  }
-};
-
-// Get specific food recall by ID
-export const getFoodRecallById = async (recallId: string) => {
-  try {
-    const response = await databases.getDocument<RecallDocument>(
-      config.databaseId!,
-      config.foodRecallCollectionId!,
-      recallId
-    );
-    
-    // Parse stringified data
-    return {
-      ...response,
-      breakfast: JSON.parse(response.breakfast),
-      lunch: JSON.parse(response.lunch),
-      dinner: JSON.parse(response.dinner),
-      warningFoods: JSON.parse(response.warningFoods)
-    };
-  } catch (error) {
-    console.error('Error getting food recall:', error);
-    throw error;
-  }
-};
-
-// Share food recall data in chat
+// Share food recall data in chat with enhanced notifications
 export const shareFoodRecallInChat = async (
   recallId: string,
   chatId: string,
   userId: string,
-  nutritionistId: string
+  nutritionistId: string,
+  userName: string
 ) => {
   try {
     // Get the food recall data
@@ -193,9 +177,147 @@ ${recall.warningFoods.map((food: FoodInput) =>
       }
     );
 
+    // Create notification for nutritionist about shared recall
+    await createChatNotification(
+      userId,
+      nutritionistId,
+      userName,
+      'Food Recall Data dibagikan untuk direview',
+      chatId,
+      true,
+      true
+    );
+
+    // Update recall document status
+    await databases.updateDocument(
+      config.databaseId!,
+      config.foodRecallCollectionId!,
+      recallId,
+      {
+        sharedInChat: true,
+        nutritionistId,
+        status: 'pending',
+        lastReviewDate: null,
+        nextReviewDate: null
+      }
+    );
+
+    // Create recall notification for both user and nutritionist
+    await createRecallNotification(
+      userId,
+      recallId,
+      recall,
+      nutritionistId
+    );
+
     return message;
   } catch (error) {
     console.error('Error sharing food recall in chat:', error);
+    throw error;
+  }
+};
+
+// Get food recall history for a user with notification status
+export const getUserFoodRecalls = async (userId: string) => {
+  try {
+    const response = await databases.listDocuments<RecallDocument>(
+      config.databaseId!,
+      config.foodRecallCollectionId!,
+      [
+        Query.equal('userId', userId),
+        Query.orderDesc('createdAt')
+      ]
+    );
+    
+    // Parse stringified data and check for recalls needing review
+    const recalls = response.documents.map(doc => {
+      const recall = {
+        ...doc,
+        breakfast: JSON.parse(doc.breakfast),
+        lunch: JSON.parse(doc.lunch),
+        dinner: JSON.parse(doc.dinner),
+        warningFoods: JSON.parse(doc.warningFoods)
+      };
+
+      // If recall needs review and hasn't been notified recently
+      if (doc.status === 'needs_update' && doc.nextReviewDate) {
+        const nextReview = new Date(doc.nextReviewDate);
+        if (nextReview <= new Date()) {
+          // Create notification for review reminder
+          createRecallNotification(
+            userId,
+            doc.$id,
+            recall,
+            doc.nutritionistId
+          ).catch(console.error);
+        }
+      }
+
+      return recall;
+    });
+
+    return recalls;
+  } catch (error) {
+    console.error('Error getting user food recalls:', error);
+    throw error;
+  }
+};
+
+// Get specific food recall by ID
+export const getFoodRecallById = async (recallId: string) => {
+  try {
+    const response = await databases.getDocument<RecallDocument>(
+      config.databaseId!,
+      config.foodRecallCollectionId!,
+      recallId
+    );
+    
+    // Parse stringified data
+    return {
+      ...response,
+      breakfast: JSON.parse(response.breakfast),
+      lunch: JSON.parse(response.lunch),
+      dinner: JSON.parse(response.dinner),
+      warningFoods: JSON.parse(response.warningFoods)
+    };
+  } catch (error) {
+    console.error('Error getting food recall:', error);
+    throw error;
+  }
+};
+
+// Update recall status with notifications
+export const updateRecallStatus = async (
+  recallId: string,
+  status: 'reviewed' | 'needs_update',
+  nutritionistId: string,
+  nextReviewDate?: string
+) => {
+  try {
+    const recall = await getFoodRecallById(recallId);
+    
+    await databases.updateDocument(
+      config.databaseId!,
+      config.foodRecallCollectionId!,
+      recallId,
+      {
+        status,
+        lastReviewDate: new Date().toISOString(),
+        nextReviewDate: nextReviewDate || null
+      }
+    );
+
+    // Create notification for the user about the review
+    await createRecallNotification(
+      recall.userId,
+      recallId,
+      recall,
+      nutritionistId
+    );
+
+    return true;
+  } catch (error) {
+    console.error('Error updating recall status:', error);
     throw error;
   }
 };

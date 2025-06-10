@@ -1,12 +1,12 @@
-import { Redirect, Stack, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useChat } from '@/components/ChatContext';
 import NotificationItem from '@/components/NotificationItem';
 import { useGlobalContext } from '@/lib/global-provider';
 import { deleteNotification, getNotifications, markAllAsRead, markAsRead } from '@/lib/notification-service';
 import { type Notification } from '@/types/notification';
+import { Redirect, Stack, useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, FlatList, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const PAGE_SIZE = 10;
 
@@ -23,7 +23,10 @@ export default function NotificationScreen() {
 
   const fetchNotifications = async (pageNum = 1, shouldRefresh = false) => {
     try {
+      if (!user) return;
+      
       const notifs = await getNotifications({
+        userId: user.$id,
         unreadMessages,
         nutritionists,
         page: pageNum,

@@ -1,177 +1,228 @@
-import { Models } from 'react-native-appwrite';
-import { Notification, NotificationParams } from '@/types/notification';
-import { createNotification, deleteNotificationFromDB, getNotifications as getAppwriteNotifications, markNotificationAsRead } from './appwrite';
+import { Query } from 'react-native-appwrite';
+import {
+  CreateNotificationParams,
+  Notification,
+  NotificationData,
+  NotificationDocument,
+  NotificationParams,
+  NotificationType
+} from '../types/notification';
+import {
+  config,
+  databases,
+  deleteNotificationFromDB,
+  markNotificationAsRead
+} from './appwrite';
+import { getFoodRecallById } from './recall-service';
 
+// Get notifications with enriched data
 export const getNotifications = async (params: NotificationParams): Promise<Notification[]> => {
   try {
     const notifications: Notification[] = [];
     
-    // Add chat notifications from unread messages
-    Object.entries(params.unreadMessages).forEach(([chatId, count]) => {
-      if (count > 0) {
-        const nutritionist = params.nutritionists.find(n => n.$id === chatId);
-        if (nutritionist) {
-          notifications.push({
-            $id: `chat-${chatId}`,
-            userId: nutritionist.$id,
-            type: 'chat',
-            title: `New messages from ${nutritionist.name}`,
-            description: `You have ${count} unread message${count > 1 ? 's' : ''}`,
-            timestamp: new Date().toISOString(),
-            read: false,
-            data: {
-              chatId,
-              nutritionistId: nutritionist.$id
-            }
-          });
+    // Get all notifications from Appwrite
+    const appwriteNotifications = await databases.listDocuments(
+      config.databaseId!,
+      config.notificationsCollectionId!,
+      [
+        Query.equal('userId', params.userId),
+        Query.orderDesc('timestamp'),
+        Query.limit(params.pageSize || 10),
+        Query.offset((params.page ? params.page - 1 : 0) * (params.pageSize || 10))
+      ]
+    );
+
+    // Enrich notifications with additional data
+    for (const doc of appwriteNotifications.documents) {
+      // Convert Appwrite document to our NotificationDocument type
+      const notification: NotificationDocument = {
+        $id: doc.$id,
+        $createdAt: doc.$createdAt,
+        $updatedAt: doc.$updatedAt,
+        $collectionId: doc.$collectionId,
+        $databaseId: doc.$databaseId,
+        $permissions: doc.$permissions,
+        userId: doc.userId,
+        type: doc.type as NotificationType,
+        title: doc.title,
+        description: doc.description,
+        timestamp: doc.timestamp,
+        read: doc.read || false,
+        data: doc.data as NotificationData
+      };
+      
+      // Enrich recall notifications with recall data if needed
+      if (notification.type === 'recall' && notification.data?.recallId) {
+        try {
+          const recallData = await getFoodRecallById(notification.data.recallId);
+          notification.data = {
+            ...notification.data,
+            recallData
+          };
+        } catch (error) {
+          console.error('Error fetching recall data:', error);
         }
       }
-    });
 
-    // Get notifications from Appwrite and merge them
-    try {
-      const userId = params.nutritionists[0]?.userId;
-      if (userId) {
-        const appwriteNotifications = await getAppwriteNotifications(
-          userId,
-          params.page,
-          params.pageSize
-        );
-        appwriteNotifications.forEach((doc: Models.Document) => {
-          notifications.push({
-            $id: doc.$id,
-            userId: doc.userId,
-            type: doc.type as 'chat' | 'article' | 'recall',
-            title: doc.title,
-            description: doc.description,
-            timestamp: doc.timestamp,
-            read: doc.read,
-            data: doc.data
-          });
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching Appwrite notifications:', error);
+      notifications.push(notification);
     }
 
-    // Sort notifications by timestamp, newest first
-    return notifications.sort((a, b) => 
-      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-    );
+    return notifications;
   } catch (error) {
     console.error('Error in getNotifications:', error);
     throw error;
   }
 };
 
-export const markAsRead = async (notificationId: string) => {
+// Create notification
+export const createNotification = async (params: CreateNotificationParams): Promise<void> => {
   try {
-    return await markNotificationAsRead(notificationId);
+    await databases.createDocument(
+      config.databaseId!,
+      config.notificationsCollectionId!,
+      'unique()',
+      {
+        userId: params.userId,
+        type: params.type,
+        title: params.title,
+        description: params.description,
+        timestamp: new Date().toISOString(),
+        read: params.read || false,
+        data: params.data || {}
+      }
+    );
   } catch (error) {
-    console.error('Error in markAsRead:', error);
+    console.error('Error in createNotification:', error);
     throw error;
   }
 };
 
-export const markAllAsRead = async (userId: string) => {
-  try {
-    // Get all unread notifications
-    const notifications = await getNotifications({
-      unreadMessages: {},
-      nutritionists: [],
-      page: 1,
-      pageSize: 1000
-    });
-    
-    // Mark each notification as read
-    const promises = notifications
-      .filter(n => !n.read)
-      .map(n => markAsRead(n.$id));
-    
-    await Promise.all(promises);
-    return true;
-  } catch (error) {
-    console.error('Error in markAllAsRead:', error);
-    throw error;
-  }
-};
-
-export const deleteNotification = async (notificationId: string) => {
-  try {
-    return await deleteNotificationFromDB(notificationId);
-  } catch (error) {
-    console.error('Error in deleteNotification:', error);
-    throw error;
-  }
-};
-
-export const sendNotification = async (notificationData: {
-  userId: string;
-  type: 'chat' | 'article' | 'recall';
-  title: string;
-  description: string;
-  read?: boolean;
-  data?: {
-    chatId?: string;
-    articleId?: string;
-    nutritionistId?: string;
-  };
-}) => {
-  try {
-    return await createNotification(notificationData);
-  } catch (error) {
-    console.error('Error in sendNotification:', error);
-    throw error;
-  }
-};
-
-// Helper function to create chat notification
+// Create chat notification
 export const createChatNotification = async (
   userId: string,
-  nutritionistName: string,
+  nutritionistId: string,
+  senderName: string,
   message: string,
   chatId: string,
-  nutritionistId: string
-) => {
-  return await sendNotification({
-    userId,
+  isFromUser: boolean,
+  isRecallShare: boolean = false
+): Promise<void> => {
+  const recipientId = isFromUser ? nutritionistId : userId;
+  const senderType = isFromUser ? "pasien" : "nutritionist";
+  
+  const title = isRecallShare 
+    ? `${senderName} membagikan data Food Recall`
+    : `Pesan baru dari ${senderType} ${senderName}`;
+
+  await createNotification({
+    userId: recipientId,
     type: 'chat',
-    title: `New message from ${nutritionistName}`,
+    title,
     description: message,
     data: {
       chatId,
-      nutritionistId
+      nutritionistId,
+      isRecallShare
     }
   });
 };
 
-// Helper function to create article notification
-export const createArticleNotification = async (
-  userId: string,
-  articleTitle: string,
-  articleId: string
-) => {
-  return await sendNotification({
-    userId,
-    type: 'article',
-    title: 'New Article Available',
-    description: `Check out new article: ${articleTitle}`,
-    data: {
-      articleId
-    }
-  });
-};
-
-// Helper function to create recall notification
+// Create recall notification
 export const createRecallNotification = async (
   userId: string,
-  title: string,
-  description: string
-) => {
-  return await sendNotification({
+  recallId: string,
+  recallData: any,
+  nutritionistId?: string
+): Promise<void> => {
+  const title = 'Pengingat Food Recall';
+  const description = `Food Recall untuk ${recallData.name} telah ${nutritionistId ? 'dibagikan ke ahli gizi' : 'dibuat'}`;
+
+  await createNotification({
     userId,
     type: 'recall',
     title,
-    description
+    description,
+    data: {
+      recallId,
+      nutritionistId,
+      recallData
+    }
   });
+
+  if (nutritionistId) {
+    await createNotification({
+      userId: nutritionistId,
+      type: 'recall',
+      title: 'Food Recall Baru',
+      description: `${recallData.name} telah membagikan data Food Recall`,
+      data: {
+        recallId,
+        userId,
+        recallData
+      }
+    });
+  }
+};
+
+// Create article notification
+export const createArticleNotification = async (
+  articleId: string,
+  articleTitle: string,
+  articleSummary: string,
+  userIds: string[]
+): Promise<void> => {
+  try {
+    const notifications = userIds.map(userId =>
+      createNotification({
+        userId,
+        type: 'article',
+        title: 'Artikel Baru Tersedia',
+        description: articleSummary,
+        data: {
+          articleId,
+          articleTitle
+        }
+      })
+    );
+
+    await Promise.all(notifications);
+  } catch (error) {
+    console.error('Error creating article notifications:', error);
+    throw error;
+  }
+};
+
+// Mark notification as read
+export const markAsRead = async (notificationId: string): Promise<void> => {
+  try {
+    await markNotificationAsRead(notificationId);
+  } catch (error) {
+    console.error('Error marking notification as read:', error);
+    throw error;
+  }
+};
+
+// Mark all notifications as read
+export const markAllAsRead = async (userId: string): Promise<void> => {
+  try {
+    const notifications = await getNotifications({ userId });
+    await Promise.all(
+      notifications
+        .filter(n => !n.read)
+        .map(n => markAsRead(n.$id))
+    );
+  } catch (error) {
+    console.error('Error marking all notifications as read:', error);
+    throw error;
+  }
+};
+
+// Delete notification
+export const deleteNotification = async (notificationId: string): Promise<void> => {
+  try {
+    await deleteNotificationFromDB(notificationId);
+  } catch (error) {
+    console.error('Error deleting notification:', error);
+    throw error;
+  }
 };

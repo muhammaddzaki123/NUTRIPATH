@@ -1,6 +1,7 @@
-import { ChatSubscriptionResponse, Message, Nutritionist, SendMessageData, User } from '@/constants/chat';
 import { Query } from 'react-native-appwrite';
+import { ChatSubscriptionResponse, Message, Nutritionist, SendMessageData, User } from '../constants/chat';
 import { client, config, databases } from './appwrite';
+import { createChatNotification } from './notification-service';
 
 // Get user details by ID
 export const getUserDetails = async (userId: string): Promise<User | null> => {
@@ -40,7 +41,7 @@ export const getNutritionists = async (): Promise<Nutritionist[]> => {
   }
 };
 
-// Send a new message with duplicate prevention
+// Send a new message with duplicate prevention and notification creation
 export const sendMessage = async (message: SendMessageData, senderType: 'user' | 'nutritionist'): Promise<Message> => {
   try {
     if (!message.text?.trim() || !message.chatId || !message.userId || !message.nutritionistId) {
@@ -100,6 +101,49 @@ export const sendMessage = async (message: SendMessageData, senderType: 'user' |
     }
 
     console.log(`Message sent by ${senderType}:`, response);
+
+    // Create notification for the recipient
+    try {
+      // Get sender details
+      let senderDetails: User | null = null;
+      let nutritionistDetails: Nutritionist | null = null;
+
+      if (senderType === 'user') {
+        senderDetails = await getUserDetails(message.userId);
+      } else {
+        // Get nutritionist details
+        try {
+          const nutritionistResponse = await databases.getDocument(
+            config.databaseId!,
+            config.ahligiziCollectionId!,
+            message.nutritionistId
+          );
+          nutritionistDetails = nutritionistResponse as Nutritionist;
+        } catch (error) {
+          console.error('Error getting nutritionist details:', error);
+        }
+      }
+
+      const senderName = senderType === 'user' 
+        ? (senderDetails?.name || 'User') 
+        : (nutritionistDetails?.name || 'Ahli Gizi');
+
+      // Create notification for recipient
+      await createChatNotification(
+        message.userId,
+        message.nutritionistId,
+        senderName,
+        message.text.trim(),
+        message.chatId,
+        senderType === 'user'
+      );
+
+      console.log('Chat notification created successfully');
+    } catch (notificationError) {
+      console.error('Error creating chat notification:', notificationError);
+      // Don't throw error here, message was sent successfully
+    }
+
     return response as Message;
   } catch (error) {
     console.error('Error sending message:', error);
