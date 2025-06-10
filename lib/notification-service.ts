@@ -13,10 +13,51 @@ import {
 } from './appwrite';
 import { getFoodRecallById } from './recall-service';
 
-// Get notifications with enriched data
+// Helper function to generate consistent chatId
+const generateChatId = (userId: string, nutritionistId: string): string => {
+  // Always use format: smaller ID - larger ID for consistency
+  const [id1, id2] = [userId, nutritionistId].sort();
+  return `${id1}-${id2}`;
+};
+
+// Helper function to prevent duplicate notifications
+const checkRecentNotification = async (
+  userId: string,
+  type: NotificationType,
+  chatId?: string,
+  timeWindow: number = 5000 // 5 seconds default
+): Promise<boolean> => {
+  try {
+    const recentTime = new Date(Date.now() - timeWindow).toISOString();
+    
+    const query = [
+      Query.equal('userId', userId),
+      Query.equal('type', type),
+      Query.greaterThan('timestamp', recentTime)
+    ];
+
+    if (chatId) {
+      query.push(Query.search('data', chatId));
+    }
+
+    const recent = await databases.listDocuments(
+      config.databaseId!,
+      config.notificationsCollectionId!,
+      query
+    );
+
+    return recent.total > 0;
+  } catch (error) {
+    console.error('Error checking recent notifications:', error);
+    return false;
+  }
+};
+
+// Get notifications with enriched data and duplicate prevention
 export const getNotifications = async (params: NotificationParams): Promise<Notification[]> => {
   try {
     const notifications: Notification[] = [];
+    const processedIds = new Set<string>();
     
     // Get all notifications from Appwrite
     const appwriteNotifications = await databases.listDocuments(
@@ -33,10 +74,22 @@ export const getNotifications = async (params: NotificationParams): Promise<Noti
     // Enrich notifications with additional data
     for (const doc of appwriteNotifications.documents) {
       try {
+        // Skip if we've already processed this notification
+        if (processedIds.has(doc.$id)) continue;
+        processedIds.add(doc.$id);
+
         // Parse the stringified data
         let parsedData = null;
         try {
           parsedData = doc.data ? JSON.parse(doc.data as string) : null;
+          
+          // For chat notifications, ensure chatId is in consistent format
+          if (doc.type === 'chat' && parsedData?.chatId) {
+            const [id1, id2] = parsedData.chatId.split('-');
+            if (id1 && id2) {
+              parsedData.chatId = generateChatId(id1, id2);
+            }
+          }
         } catch (parseError) {
           console.error('Error parsing notification data:', parseError);
           parsedData = null;
@@ -80,9 +133,21 @@ export const getNotifications = async (params: NotificationParams): Promise<Noti
   }
 };
 
-// Create notification
+// Create notification with duplicate prevention
 export const createNotification = async (params: CreateNotificationParams): Promise<void> => {
   try {
+    // Check for recent duplicate notifications
+    const hasDuplicate = await checkRecentNotification(
+      params.userId,
+      params.type,
+      params.data?.chatId
+    );
+
+    if (hasDuplicate) {
+      console.log('Skipping duplicate notification:', params);
+      return;
+    }
+
     await databases.createDocument(
       config.databaseId!,
       config.notificationsCollectionId!,
@@ -103,7 +168,7 @@ export const createNotification = async (params: CreateNotificationParams): Prom
   }
 };
 
-// Create chat notification
+// Create chat notification with consistent chatId format
 export const createChatNotification = async (
   userId: string,
   nutritionistId: string,
@@ -116,9 +181,20 @@ export const createChatNotification = async (
   const recipientId = isFromUser ? nutritionistId : userId;
   const senderType = isFromUser ? "pasien" : "nutritionist";
   
+  // Ensure consistent chatId format
+  const formattedChatId = generateChatId(userId, nutritionistId);
+  
   const title = isRecallShare 
     ? `${senderName} membagikan data Food Recall`
     : `Pesan baru dari ${senderType} ${senderName}`;
+
+  // Check for recent duplicate notifications
+  const hasDuplicate = await checkRecentNotification(recipientId, 'chat', formattedChatId);
+  
+  if (hasDuplicate) {
+    console.log('Skipping duplicate chat notification');
+    return;
+  }
 
   await createNotification({
     userId: recipientId,
@@ -126,14 +202,14 @@ export const createChatNotification = async (
     title,
     description: message,
     data: {
-      chatId,
+      chatId: formattedChatId,
       nutritionistId,
       isRecallShare
     }
   });
 };
 
-// Create recall notification
+// Rest of the file remains unchanged...
 export const createRecallNotification = async (
   userId: string,
   recallId: string,
@@ -170,7 +246,6 @@ export const createRecallNotification = async (
   }
 };
 
-// Create article notification
 export const createArticleNotification = async (
   articleId: string,
   articleTitle: string,
@@ -198,7 +273,6 @@ export const createArticleNotification = async (
   }
 };
 
-// Mark notification as read
 export const markAsRead = async (notificationId: string): Promise<void> => {
   try {
     await markNotificationAsRead(notificationId);
@@ -208,7 +282,6 @@ export const markAsRead = async (notificationId: string): Promise<void> => {
   }
 };
 
-// Mark all notifications as read
 export const markAllAsRead = async (userId: string): Promise<void> => {
   try {
     const notifications = await getNotifications({ userId });
@@ -223,7 +296,6 @@ export const markAllAsRead = async (userId: string): Promise<void> => {
   }
 };
 
-// Delete notification
 export const deleteNotification = async (notificationId: string): Promise<void> => {
   try {
     await deleteNotificationFromDB(notificationId);

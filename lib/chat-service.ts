@@ -3,6 +3,18 @@ import { ChatSubscriptionResponse, Message, Nutritionist, SendMessageData, User 
 import { client, config, databases } from './appwrite';
 import { createChatNotification } from './notification-service';
 
+// Helper function to validate chatId format
+const validateChatId = (chatId: string): boolean => {
+  return chatId.includes('-') && chatId.split('-').length === 2;
+};
+
+// Helper function to generate consistent chatId
+export const generateChatId = (userId: string, nutritionistId: string): string => {
+  // Always use format: smaller ID - larger ID for consistency
+  const [id1, id2] = [userId, nutritionistId].sort();
+  return `${id1}-${id2}`;
+};
+
 // Get user details by ID
 export const getUserDetails = async (userId: string): Promise<User | null> => {
   try {
@@ -44,19 +56,22 @@ export const getNutritionists = async (): Promise<Nutritionist[]> => {
 // Send a new message with duplicate prevention and notification creation
 export const sendMessage = async (message: SendMessageData, senderType: 'user' | 'nutritionist'): Promise<Message> => {
   try {
-    if (!message.text?.trim() || !message.chatId || !message.userId || !message.nutritionistId) {
+    if (!message.text?.trim() || !message.userId || !message.nutritionistId) {
       throw new Error('Data pesan tidak lengkap');
     }
 
+    // Ensure consistent chatId format
+    const chatId = generateChatId(message.userId, message.nutritionistId);
+    
     // Generate unique message hash
-    const messageHash = `${message.chatId}-${message.text.trim()}-${senderType}-${Date.now()}`;
+    const messageHash = `${chatId}-${message.text.trim()}-${senderType}-${Date.now()}`;
     
     // Enhanced duplicate check with shorter window
     const recentMessages = await databases.listDocuments(
       config.databaseId!,
       config.chatMessagesCollectionId!,
       [
-        Query.equal('chatId', message.chatId),
+        Query.equal('chatId', chatId),
         Query.equal('text', message.text.trim()),
         Query.equal('sender', senderType),
         Query.orderDesc('time'),
@@ -77,7 +92,7 @@ export const sendMessage = async (message: SendMessageData, senderType: 'user' |
     const timestamp = new Date().toISOString();
     
     console.log('Sending message:', {
-      chatId: message.chatId,
+      chatId,
       userId: message.userId,
       nutritionistId: message.nutritionistId,
       sender: senderType,
@@ -89,23 +104,21 @@ export const sendMessage = async (message: SendMessageData, senderType: 'user' |
       config.chatMessagesCollectionId!,
       'unique()',
       {
-        chatId: message.chatId,
+        chatId,
         userId: message.userId,
         nutritionistId: message.nutritionistId,
         text: message.text.trim(),
         sender: senderType,
         time: timestamp,
         read: false,
-        messageHash, // Store message hash for additional duplicate checking
-        processedAt: Date.now() // Add processing timestamp
+        messageHash,
+        processedAt: Date.now()
       }
     );
 
     if (!response) {
       throw new Error('Gagal membuat dokumen pesan');
     }
-
-    console.log(`Message sent by ${senderType}:`, response);
 
     // Create notification for the recipient
     try {
@@ -116,7 +129,6 @@ export const sendMessage = async (message: SendMessageData, senderType: 'user' |
       if (senderType === 'user') {
         senderDetails = await getUserDetails(message.userId);
       } else {
-        // Get nutritionist details
         try {
           const nutritionistResponse = await databases.getDocument(
             config.databaseId!,
@@ -133,20 +145,19 @@ export const sendMessage = async (message: SendMessageData, senderType: 'user' |
         ? (senderDetails?.name || 'User') 
         : (nutritionistDetails?.name || 'Ahli Gizi');
 
-      // Create notification for recipient
+      // Create notification for recipient using consistent chatId
       await createChatNotification(
         message.userId,
         message.nutritionistId,
         senderName,
         message.text.trim(),
-        message.chatId,
+        chatId,
         senderType === 'user'
       );
 
       console.log('Chat notification created successfully');
     } catch (notificationError) {
       console.error('Error creating chat notification:', notificationError);
-      // Don't throw error here, message was sent successfully
     }
 
     return response as Message;
@@ -156,24 +167,13 @@ export const sendMessage = async (message: SendMessageData, senderType: 'user' |
   }
 };
 
-// Mark a message as read
-export const markMessageAsRead = async (messageId: string): Promise<void> => {
-  try {
-    await databases.updateDocument(
-      config.databaseId!,
-      config.chatMessagesCollectionId!,
-      messageId,
-      { read: true }
-    );
-  } catch (error) {
-    console.error('Error marking message as read:', error);
-    throw error;
-  }
-};
-
 // Get all messages for a specific chat with duplicate prevention
 export const getChatMessages = async (chatId: string): Promise<Message[]> => {
   try {
+    if (!validateChatId(chatId)) {
+      throw new Error('Invalid chat ID format. Expected format: userId-nutritionistId');
+    }
+
     console.log('Fetching messages for chat:', chatId);
     const response = await databases.listDocuments(
       config.databaseId!,
@@ -223,62 +223,6 @@ export const getChatMessages = async (chatId: string): Promise<Message[]> => {
   }
 };
 
-// Subscribe to real-time chat updates with duplicate prevention
-export const subscribeToChat = async (
-  chatId: string, 
-  callback: (message: Message) => void
-) => {
-  if (!chatId) {
-    throw new Error('Chat ID is required for subscription');
-  }
-
-  try {
-    console.log('Setting up subscription for chat:', chatId);
-    
-    let lastMessageId: string | null = null;
-    let lastMessageTime: number = 0;
-
-    const unsubscribe = await client.subscribe(
-      `databases.${config.databaseId}.collections.${config.chatMessagesCollectionId}.documents`,
-      (response: ChatSubscriptionResponse) => {
-        const message = response.payload as Message;
-        
-        // Only process messages for this chat
-        if (message?.chatId !== chatId) return;
-
-        // Prevent duplicate events within 1 second
-        const currentTime = Date.now();
-        if (message.$id === lastMessageId && currentTime - lastMessageTime < 1000) {
-          console.log('Preventing duplicate event for message:', message.$id);
-          return;
-        }
-
-        lastMessageId = message.$id;
-        lastMessageTime = currentTime;
-
-        if (response.events.includes('databases.*.collections.*.documents.*.create')) {
-          console.log('New message received:', message);
-          callback(message);
-        }
-        
-        if (response.events.includes('databases.*.collections.*.documents.*.update')) {
-          console.log('Message updated:', message);
-          callback(message);
-        }
-      }
-    );
-
-    console.log('Chat subscription setup successful');
-    return () => {
-      console.log('Cleaning up chat subscription');
-      unsubscribe();
-    };
-  } catch (error) {
-    console.error('Error setting up chat subscription:', error);
-    throw new Error(`Failed to setup chat subscription: ${error}`);
-  }
-};
-
 // Get all chats for a nutritionist with duplicate prevention
 export const getNutritionistChats = async (nutritionistId: string) => {
   try {
@@ -298,26 +242,32 @@ export const getNutritionistChats = async (nutritionistId: string) => {
     // Group messages by chatId and remove duplicates
     const chats: { [key: string]: Message[] } = {};
     const userIds = new Set<string>();
+    const processedMessageKeys = new Set<string>();
 
-    response.documents.forEach((doc) => {
+    for (const doc of response.documents) {
       const message = doc as Message;
+      
+      // Skip invalid chatId format
+      if (!validateChatId(message.chatId)) {
+        console.error('Invalid chat ID format:', message.chatId);
+        continue;
+      }
+
       if (!chats[message.chatId]) {
         chats[message.chatId] = [];
         userIds.add(message.userId);
       }
 
-      // Check for duplicates before adding
-      const isDuplicate = chats[message.chatId].some(
-        (m) => m.$id === message.$id || 
-              (m.text === message.text && 
-               m.sender === message.sender && 
-               Math.abs(new Date(m.time).getTime() - new Date(message.time).getTime()) < 1000)
-      );
-
-      if (!isDuplicate) {
-        chats[message.chatId].push(message);
+      // Enhanced duplicate check
+      const messageKey = `${message.text}-${message.sender}-${message.time}`;
+      if (processedMessageKeys.has(messageKey)) {
+        console.log('Skipping duplicate message:', messageKey);
+        continue;
       }
-    });
+      processedMessageKeys.add(messageKey);
+
+      chats[message.chatId].push(message);
+    }
 
     // Fetch user details for all users in parallel
     const userDetailsPromises = Array.from(userIds).map(userId => getUserDetails(userId));
@@ -346,9 +296,76 @@ export const getNutritionistChats = async (nutritionistId: string) => {
   }
 };
 
+// Subscribe to real-time chat updates with duplicate prevention
+export const subscribeToChat = async (
+  chatId: string, 
+  callback: (message: Message) => void
+) => {
+  if (!chatId || !validateChatId(chatId)) {
+    throw new Error('Invalid chat ID format or chat ID is missing. Expected format: userId-nutritionistId');
+  }
+
+  try {
+    console.log('Setting up subscription for chat:', chatId);
+    
+    // Track processed messages to prevent duplicates
+    const processedMessages = new Set<string>();
+    
+    let lastMessageId: string | null = null;
+    let lastMessageTime: number = 0;
+
+    const unsubscribe = await client.subscribe(
+      `databases.${config.databaseId}.collections.${config.chatMessagesCollectionId}.documents`,
+      (response: ChatSubscriptionResponse) => {
+        const message = response.payload as Message;
+        
+        // Only process messages for this chat
+        if (message?.chatId !== chatId) return;
+
+        // Enhanced duplicate prevention
+        const messageKey = `${message.$id}-${message.text}-${message.sender}`;
+        if (processedMessages.has(messageKey)) {
+          console.log('Preventing duplicate message:', messageKey);
+          return;
+        }
+        processedMessages.add(messageKey);
+
+        // Additional time-based duplicate prevention
+        const currentTime = Date.now();
+        if (message.$id === lastMessageId && currentTime - lastMessageTime < 1000) {
+          console.log('Preventing duplicate event for message:', message.$id);
+          return;
+        }
+
+        lastMessageId = message.$id;
+        lastMessageTime = currentTime;
+
+        if (response.events.includes('databases.*.collections.*.documents.*.create')) {
+          console.log('New message received:', message);
+          callback(message);
+        }
+      }
+    );
+
+    console.log('Chat subscription setup successful');
+    return () => {
+      console.log('Cleaning up chat subscription');
+      unsubscribe();
+    };
+  } catch (error) {
+    console.error('Error setting up chat subscription:', error);
+    throw new Error(`Failed to setup chat subscription: ${error}`);
+  }
+};
+
 // Get unread message count
 export const getUnreadCount = async (chatId: string, userType: 'user' | 'nutritionist'): Promise<number> => {
   try {
+    if (!validateChatId(chatId)) {
+      console.error('Invalid chat ID format:', chatId);
+      return 0;
+    }
+
     const response = await databases.listDocuments(
       config.databaseId!,
       config.chatMessagesCollectionId!,
@@ -384,56 +401,5 @@ export const updateNutritionistStatus = async (
   } catch (error) {
     console.error('Error updating nutritionist status:', error);
     throw error;
-  }
-};
-
-// Subscribe to nutritionist chats with duplicate prevention
-export const subscribeToNutritionistChats = async (
-  nutritionistId: string,
-  callback: (message: Message) => void
-) => {
-  if (!nutritionistId) {
-    throw new Error('Nutritionist ID is required for subscription');
-  }
-
-  try {
-    console.log('Setting up nutritionist chats subscription:', nutritionistId);
-    
-    let lastMessageId: string | null = null;
-    let lastMessageTime: number = 0;
-
-    const unsubscribe = await client.subscribe(
-      `databases.${config.databaseId}.collections.${config.chatMessagesCollectionId}.documents`,
-      (response: ChatSubscriptionResponse) => {
-        const message = response.payload as Message;
-        
-        // Only process messages for this nutritionist
-        if (message?.nutritionistId !== nutritionistId) return;
-
-        // Prevent duplicate events within 1 second
-        const currentTime = Date.now();
-        if (message.$id === lastMessageId && currentTime - lastMessageTime < 1000) {
-          console.log('Preventing duplicate event for message:', message.$id);
-          return;
-        }
-
-        lastMessageId = message.$id;
-        lastMessageTime = currentTime;
-
-        if (response.events.includes('databases.*.collections.*.documents.*.create')) {
-          console.log('New message for nutritionist:', message);
-          callback(message);
-        }
-      }
-    );
-
-    console.log('Nutritionist chats subscription setup successful');
-    return () => {
-      console.log('Cleaning up nutritionist chats subscription');
-      unsubscribe();
-    };
-  } catch (error) {
-    console.error('Error setting up nutritionist chats subscription:', error);
-    throw new Error(`Failed to setup nutritionist chats subscription: ${error}`);
   }
 };
