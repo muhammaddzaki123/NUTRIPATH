@@ -74,8 +74,8 @@ export default function WarningScreen() {
         router.push('/konsultasi');
       }
     } catch (error) {
-      console.error('Error saving recall data:', error);
-      Alert.alert('Error', 'Gagal menyimpan data recall');
+      console.error('Error saving Food Record data:', error);
+      Alert.alert('Error', 'Gagal menyimpan data Food Record');
     }
   };
 

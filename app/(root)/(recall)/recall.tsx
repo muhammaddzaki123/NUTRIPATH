@@ -1,10 +1,10 @@
+import { updateUserProfile } from '@/lib/appwrite';
+import { useGlobalContext } from '@/lib/global-provider';
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, SafeAreaView, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { updateUserProfile } from '@/lib/appwrite';
-import { useGlobalContext } from '@/lib/global-provider';
 
 interface UserData {
   name: string;
@@ -33,7 +33,7 @@ export default function RecallScreen() {
 
   const handleUpdateProfile = async (newData: Partial<UserData>) => {
     if (!user) return;
-    
+
     try {
       setIsUpdating(true);
       await updateUserProfile(user.$id, newData);
@@ -54,7 +54,7 @@ export default function RecallScreen() {
 
     try {
       setIsUpdating(true);
-      
+
       // Update user profile in database
       if (user) {
         await updateUserProfile(user.$id, {
@@ -92,7 +92,7 @@ export default function RecallScreen() {
           <TouchableOpacity onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={24} color={"white"} className='ml-2' />
           </TouchableOpacity>
-          <Text className="text-white text-xl font-bold ml-4">RECALL</Text>
+          <Text className="text-white text-xl font-bold ml-4">FOOD RECORD</Text>
           <TouchableOpacity onPress={() => router.back()} className="ml-auto">
             <Text className="text-3xl text-white mr-4">×</Text>
           </TouchableOpacity>
@@ -111,11 +111,12 @@ export default function RecallScreen() {
             <View>
               <Text className="text-white text-xl font-rubik-semibold mb-2">Nama :</Text>
               <TextInput
-                className="w-full bg-white rounded-3xl px-4 py-4 text-base min-h-[60px] font-rubik"
+                className="w-full bg-white rounded-3xl px-4 py-4 text-base min-h-[60px] font-rubik text-black" // Tambahkan text-black
                 placeholder="Masukkan nama"
+                placeholderTextColor="#9CA3AF" // Warna placeholder bisa disesuaikan
                 value={userData.name}
                 onChangeText={(text) => {
-                  setUserData({...userData, name: text});
+                  setUserData({ ...userData, name: text });
                   handleUpdateProfile({ name: text });
                 }}
               />
@@ -126,12 +127,13 @@ export default function RecallScreen() {
               <View className="flex-[0.4]">
                 <Text className="text-white text-xl font-rubik-semibold mb-2">Usia :</Text>
                 <TextInput
-                  className="w-full bg-white rounded-3xl px-4 py-4 text-base min-h-[60px] font-rubik"
+                  className="w-full bg-white rounded-3xl px-4 py-4 text-base min-h-[60px] font-rubik text-black" // Tambahkan text-black
                   placeholder="Usia"
+                  placeholderTextColor="#9CA3AF" // Warna placeholder bisa disesuaikan
                   keyboardType="numeric"
                   value={userData.age}
                   onChangeText={(text) => {
-                    setUserData({...userData, age: text});
+                    setUserData({ ...userData, age: text });
                     handleUpdateProfile({ age: text });
                   }}
                 />
@@ -142,14 +144,21 @@ export default function RecallScreen() {
                   <Picker
                     selectedValue={userData.gender}
                     onValueChange={(value) => {
-                      setUserData({...userData, gender: value});
+                      setUserData({ ...userData, gender: value });
                       handleUpdateProfile({ gender: value });
                     }}
-                    className="h-[60px] bg-white font-rubik"
+                    style={{
+                        height: 60,
+                        width: '100%',
+                        backgroundColor: 'white',
+                        color: 'black', // Warna teks item terpilih
+                    }}
+                    dropdownIconColor="black" // Warna panah dropdown
+                    className="font-rubik" // Jika className diperlukan untuk styling font
                   >
-                    <Picker.Item label="Pilih" value="" />
-                    <Picker.Item label="Laki-laki" value="Laki-laki" />
-                    <Picker.Item label="Perempuan" value="Perempuan" />
+                    <Picker.Item label="Pilih" value="" style={{ color: 'black', fontSize: 16 }} />
+                    <Picker.Item label="Laki-laki" value="Laki-laki" style={{ color: 'black', fontSize: 16 }} />
+                    <Picker.Item label="Perempuan" value="Perempuan" style={{ color: 'black', fontSize: 16 }} />
                   </Picker>
                 </View>
               </View>
@@ -162,18 +171,26 @@ export default function RecallScreen() {
                 <Picker
                   selectedValue={userData.disease}
                   onValueChange={(value) => {
-                    setUserData({...userData, disease: value});
+                    setUserData({ ...userData, disease: value });
                     if (value !== 'Pilih penyakit') {
                       handleUpdateProfile({ disease: value.toLowerCase() });
                     }
                   }}
-                  className="h-[60px] bg-white font-rubik"
+                  style={{
+                      height: 60,
+                      width: '100%',
+                      backgroundColor: 'white',
+                      color: 'black', // Warna teks item terpilih
+                  }}
+                  dropdownIconColor="black" // Warna panah dropdown
+                  className="font-rubik" // Jika className diperlukan untuk styling font
                 >
                   {diseases.map((disease) => (
-                    <Picker.Item 
-                      key={disease} 
-                      label={disease} 
+                    <Picker.Item
+                      key={disease}
+                      label={disease}
                       value={disease}
+                      style={{ color: 'black', fontSize: 16 }} // Warna teks setiap item
                     />
                   ))}
                 </Picker>
@@ -182,7 +199,7 @@ export default function RecallScreen() {
           </View>
 
           {/* Next Button */}
-          <TouchableOpacity 
+          <TouchableOpacity
             className="bg-white rounded-full py-4 px-6 mt-5 mb-4 items-center shadow-lg active:opacity-80 hover:bg-opacity-90"
             onPress={handleNext}
           >

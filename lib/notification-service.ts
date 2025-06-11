@@ -141,8 +141,8 @@ export const createRecallNotification = async (
   recallData: any,
   nutritionistId?: string
 ): Promise<void> => {
-  const title = 'Pengingat Food Recall';
-  const description = `Food Recall untuk ${recallData.name} telah ${nutritionistId ? 'dibagikan ke ahli gizi' : 'dibuat'}`;
+  const title = 'Pengingat Food Record';
+  const description = `Food Record untuk ${recallData.name} telah ${nutritionistId ? 'dibagikan ke ahli gizi' : 'dibuat'}`;
 
   await createNotification({
     userId,
@@ -160,8 +160,8 @@ export const createRecallNotification = async (
     await createNotification({
       userId: nutritionistId,
       type: 'recall',
-      title: 'Food Recall Baru',
-      description: `${recallData.name} telah membagikan data Food Recall`,
+      title: 'Food Record Baru',
+      description: `${recallData.name} telah membagikan data Food Record`,
       data: {
         recallId,
         userId,
