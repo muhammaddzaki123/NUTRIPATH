@@ -4,7 +4,7 @@ import { useChat } from '@/components/ChatContext';
 import { Nutritionist } from '@/constants/chat';
 import { useGlobalContext } from '@/lib/global-provider';
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
-import { StatusBar } from 'expo-status-bar'; // <-- 1. Import StatusBar
+import { StatusBar } from 'expo-status-bar'; 
 import { Link, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { ActivityIndicator, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
