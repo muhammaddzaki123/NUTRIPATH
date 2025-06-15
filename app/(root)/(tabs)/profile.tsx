@@ -1,4 +1,3 @@
-import { diseaseInformation } from '@/constants/data';
 import icons from '@/constants/icons';
 import { config, databases, logout, storage } from '@/lib/appwrite';
 import { useGlobalContext } from '@/lib/global-provider';
@@ -148,24 +147,6 @@ const Profile = () => {
     }
   };
 
-  const getDiseaseInfo = () => {
-    if (!user) {
-      return null;
-    }
-    
-    if (user.userType === 'user' && user.disease && typeof user.disease === 'string' && user.disease.toLowerCase() in diseaseInformation) {
-      return diseaseInformation[user.disease.toLowerCase()];
-    }
-    
-    if (user.userType === 'nutritionist' && user.specialization && typeof user.specialization === 'string' && user.specialization.toLowerCase() in diseaseInformation) {
-      return diseaseInformation[user.specialization.toLowerCase()];
-    }
-    
-    return null;
-  };
-
-  const diseaseInfo = getDiseaseInfo();
-
   return (
     <SafeAreaView className="h-full bg-primary-400">
       <ScrollView
@@ -232,28 +213,6 @@ const Profile = () => {
             </Text>
           </View>
         </View>
-
-        {user && diseaseInfo && (
-          <View className="flex flex-col mt-5 border-t pt-5 border-primary-200">
-            <View className="bg-primary-200 rounded-2xl p-5">
-              <Text className="text-lg font-rubik-bold">
-                {user.userType === 'user' ? 'Informasi' : 'Spesialisasi'} {diseaseInfo.title}:
-              </Text>
-              <Text
-                className="text-lg font-rubik-regular text-wrap text-justify"
-                numberOfLines={isTextExpanded ? undefined : initialLinesToShow}
-                ellipsizeMode="tail"
-              >
-                {diseaseInfo.description}
-              </Text>
-              <TouchableOpacity onPress={toggleText} className="mt-2 self-start">
-                <Text className="text-lg font-rubik-medium text-secondary-200">
-                  {isTextExpanded ? "Lihat Lebih Sedikit" : "Lihat Lebih Banyak"}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
 
         <View className="flex flex-col border-t mt-5 pt-5 border-primary-200">
           {user ? (
