@@ -24,10 +24,6 @@ type MealsState = {
   [key in MealType]: MealData;
 };
 
-/**
- * Komponen untuk satu baris input makanan.
- * PERUBAHAN: Diterapkan style untuk memperbaiki teks yang terpotong pada Picker di Android.
- */
 const FoodInputRow = ({
   value,
   onChange,
@@ -42,7 +38,7 @@ const FoodInputRow = ({
       {/* Nama Makanan */}
       <View className="flex-1">
         <TextInput
-          className="bg-white rounded-2xl px-4 py-3.5 text-base shadow-sm text-black"
+          className="bg-white rounded-2xl px-4 h-12 text-base shadow-sm text-black" // PERUBAHAN: Menggunakan h-12 untuk tinggi yang konsisten
           style={{ elevation: 2 }}
           value={value.name}
           onChangeText={(text: string) => onChange({ ...value, name: text })}
@@ -54,7 +50,7 @@ const FoodInputRow = ({
       {/* Jumlah (Dipersempit) */}
       <View className="w-16 ml-2">
         <TextInput
-          className="bg-white rounded-2xl px-4 py-3.5 text-base text-center shadow-sm text-black"
+          className="bg-white rounded-2xl px-4 h-12 text-base text-center shadow-sm text-black" // PERUBAHAN: Menggunakan h-12 untuk tinggi yang konsisten
           style={{ elevation: 2 }}
           value={value.amount}
           onChangeText={(text: string) => onChange({ ...value, amount: text })}
@@ -71,7 +67,7 @@ const FoodInputRow = ({
           className="bg-white rounded-2xl shadow-sm overflow-hidden h-12 flex justify-center" 
           style={{ elevation: 2 }}
         >
-          {/* PICKER: Diberi margin vertikal negatif untuk memperbaiki rendering di Android */}
+          
           <Picker
             selectedValue={value.unit}
             onValueChange={(text: string) => onChange({ ...value, unit: text })}
