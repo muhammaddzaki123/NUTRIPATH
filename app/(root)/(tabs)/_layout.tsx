@@ -49,10 +49,19 @@ const TabsLayout = () => {
             title: 'Notification',
             headerShown : false,
             tabBarIcon:({ focused })=> (
-                <TabIcon icon={icons.search} focused={focused} title={'Notification'}/>
+                <TabIcon icon={icons.bell} focused={focused} title={'Notification'}/>
             )
         }}
     /><Tabs.Screen
+    name='info'
+    options={{
+        title: "info",
+        headerShown : false,
+        tabBarIcon:({ focused })=> (
+            <TabIcon icon={icons.search} focused={focused} title={'info'}/>
+        )
+    }}
+/><Tabs.Screen
     name='profile'
     options={{
         title: "Profile",
