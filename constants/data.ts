@@ -16,7 +16,8 @@ export const diseaseInformation: DiseaseInformation = {
     title: "Hipertensi",
     description: `Hipertensi, atau tekanan darah tinggi, adalah kondisi di mana tekanan darah dalam tubuh melebihi batas normal. Kondisi ini sering disebut sebagai "silent killer" atau pembunuh diam-diam karena biasanya tidak menunjukkan gejala yang jelas, namun dapat menyebabkan komplikasi serius seperti serangan jantung, stroke, dan kerusakan organ lainnya jika tidak ditangani dengan baik.
 
-penyebab : 1. Hipertensi Primer (Esensial)
+penyebab :
+1. Hipertensi Primer (Esensial)
 Hipertensi primer adalah jenis yang paling umum, mencakup sekitar 90–95% kasus. Penyebab pastinya tidak diketahui, namun faktor-faktor seperti gaya hidup tidak sehat (misalnya konsumsi garam berlebih, kurang olahraga, stres), kelebihan berat badan, dan faktor genetik diduga berperan dalam perkembangannya.
 2. Hipertensi Sekunder
 Hipertensi sekunder terjadi akibat kondisi medis tertentu, seperti penyakit ginjal, gangguan pada kelenjar adrenal atau tiroid, sleep apnea, serta penggunaan obat-obatan tertentu (misalnya pil KB atau obat antiinflamasi nonsteroid). ~Jenis ini lebih jarang terjadi, mencakup sekitar 5–10% kasus.
