@@ -1,4 +1,4 @@
-import { diseaseInformation } from '@/constants/data';
+import { ContentBlock, diseaseInformation } from '@/constants/data';
 import { useGlobalContext } from '@/lib/global-provider';
 import React from "react";
 import {
@@ -16,6 +16,7 @@ const Info = () => {
       return null;
     }
     
+    // Menggunakan spesialisasi untuk ahli gizi dan penyakit untuk user
     const diseaseKey = (user.userType === 'user' ? user.disease : user.specialization)?.toLowerCase();
     
     if (diseaseKey && diseaseKey in diseaseInformation) {
@@ -27,37 +28,75 @@ const Info = () => {
 
   const diseaseInfo = getDiseaseInfo();
 
-  // Function to render description with styled paragraphs
-  const renderDescription = (description: string) => {
-    // Split the description into paragraphs based on one or more newlines
-    const paragraphs = description.split(/\n\s*\n/);
-    
-    return paragraphs.map((paragraph, index) => {
-      // Check if a paragraph is a list item (starts with a number or dash)
-      const isListItem = /^\s*([-\d]+\.?\)\s*)/.test(paragraph);
+  // --- KOMPONEN BARU UNTUK MERENDER KONTEN SECARA DINAMIS ---
+  const renderContentComponent = (item: ContentBlock, index: number) => {
+    switch (item.type) {
+      case 'heading':
+        return (
+          <Text key={index} className="text-xl font-rubik-bold text-gray-900 mb-3 mt-4">
+            {item.data}
+          </Text>
+        );
 
-      return (
-        <Text 
-          key={index} 
-          className={`text-base text-gray-800 mb-4 leading-relaxed ${isListItem ? 'ml-4' : ''}`}
-        >
-          {paragraph.trim()}
-        </Text>
-      );
-    });
+      case 'paragraph':
+        return (
+          <Text key={index} className="text-base text-gray-800 mb-4 leading-relaxed text-justify">
+            {item.data}
+          </Text>
+        );
+
+      case 'list':
+        return (
+          <View key={index} className="mb-4 ml-4">
+            {(item.data as string[]).map((listItem, listIndex) => (
+              <View key={listIndex} className="flex-row mb-2">
+                <Text className="text-base text-gray-800 mr-2">•</Text>
+                <Text className="flex-1 text-base text-gray-800 leading-relaxed text-justify">{listItem}</Text>
+              </View>
+            ))}
+          </View>
+        );
+      
+      case 'table':
+        const { headers, rows } = item.data as { headers: string[], rows: string[][] };
+        return (
+          <View key={index} className="border border-gray-300 rounded-lg my-4 overflow-hidden">
+            {/* Table Header */}
+            <View className="flex-row bg-gray-100 p-2 border-b border-gray-300">
+              {headers.map((header, headerIndex) => (
+                <Text key={headerIndex} className={`flex-1 font-rubik-bold text-gray-900 ${headerIndex > 0 ? 'text-center' : ''}`}>
+                  {header}
+                </Text>
+              ))}
+            </View>
+            {/* Table Rows */}
+            {rows.map((row, rowIndex) => (
+              <View key={rowIndex} className="flex-row p-2 border-t border-gray-200">
+                {row.map((cell, cellIndex) => (
+                  <Text key={cellIndex} className={`flex-1 text-gray-800 ${cellIndex > 0 ? 'text-center' : ''}`}>
+                    {cell}
+                  </Text>
+                ))}
+              </View>
+            ))}
+          </View>
+        );
+
+      default:
+        return null;
+    }
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-primary-400 mb-10 pb-10">
-      <ScrollView contentContainerStyle={{ paddingVertical: 24, paddingHorizontal: 16 }}>
+    <SafeAreaView className="flex-1 bg-primary-400">
+      <ScrollView contentContainerStyle={{ paddingBottom: 100, paddingTop: 24, paddingHorizontal: 16 }}>
         {user && diseaseInfo ? (
           <View className="bg-white rounded-2xl shadow-lg p-6">
-            <Text className="text-3xl font-rubik-bold text-primary-500 mb-2 pb-2 border-b-2 border-primary-400">
+            <Text className="text-3xl font-rubik-bold text-primary-500 mb-4 pb-2 border-b-2 border-primary-100">
               {user.userType === 'user' ? 'Informasi' : 'Spesialisasi'}: {diseaseInfo.title}
             </Text>
-            <View className="mt-4">
-              {renderDescription(diseaseInfo.description)}
-            </View>
+            {/* Merender konten secara dinamis */}
+            {diseaseInfo.content.map((item, index) => renderContentComponent(item, index))}
           </View>
         ) : (
           <View className="flex-1 justify-center items-center p-4">
