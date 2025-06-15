@@ -1,7 +1,10 @@
+// app/(root)/(konsultasi)/konsultasi.tsx
+
 import { useChat } from '@/components/ChatContext';
 import { Nutritionist } from '@/constants/chat';
 import { useGlobalContext } from '@/lib/global-provider';
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
+import { StatusBar } from 'expo-status-bar'; // <-- 1. Import StatusBar
 import { Link, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { ActivityIndicator, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
@@ -16,13 +19,17 @@ const KonsultasiScreen = () => {
   // Check if user is logged in
   if (!user) {
     return (
-      <SafeAreaView className="flex-1 bg-[#1CD6CE] items-center justify-center">
-        <Text className="text-white text-lg mb-4">Silakan login terlebih dahulu</Text>
-        <TouchableOpacity 
+      <SafeAreaView className="flex-1 bg-primary-500 items-center justify-center">
+        {/* Atur status bar untuk layar ini */}
+        <StatusBar backgroundColor="#0BBEBB" style="light" />
+        <Text className="text-white text-lg mb-4 text-center px-8">
+          Anda harus login untuk mengakses fitur konsultasi.
+        </Text>
+        <TouchableOpacity
           onPress={() => router.replace('/sign-in')}
-          className="bg-white px-6 py-2 rounded-full"
+          className="bg-white px-8 py-3 rounded-full shadow-lg"
         >
-          <Text className="text-[#1CD6CE] font-semibold">Login</Text>
+          <Text className="text-primary-500 font-rubik-bold text-base">Login Sekarang</Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
@@ -31,16 +38,17 @@ const KonsultasiScreen = () => {
   // Show loading state
   if ((loading && user.userType === 'nutritionist') || (chatLoading && user.userType === 'user')) {
     return (
-      <SafeAreaView className="flex-1 bg-[#1CD6CE] items-center justify-center">
+      <SafeAreaView className="flex-1 bg-primary-500 items-center justify-center">
+        <StatusBar backgroundColor="#0BBEBB" style="light" />
         <ActivityIndicator size="large" color="white" />
-        <Text className="text-white mt-4">
+        <Text className="text-white mt-4 font-rubik text-base">
           {user.userType === 'nutritionist' ? 'Memuat daftar chat...' : 'Memuat daftar ahli gizi...'}
         </Text>
       </SafeAreaView>
     );
   }
 
-  // If user is a nutritionist, show chat list
+  // --- Tampilan untuk Ahli Gizi ---
   if (user.userType === 'nutritionist') {
     const chatList = Object.entries(messages)
       .map(([chatId, chatMessages]) => {
@@ -49,10 +57,7 @@ const KonsultasiScreen = () => {
         const unreadCount = chatMessages.filter(
           msg => !msg.read && msg.sender === 'user'
         ).length;
-
-        // Get user details from the last message
         const userDetails = lastMessage?.userDetails;
-
         return {
           chatId,
           lastMessage,
@@ -60,65 +65,67 @@ const KonsultasiScreen = () => {
           unreadCount,
           timestamp: lastMessage?.time || '',
           userName: userDetails?.name || `User ${userId}`,
-          userAvatar: userDetails?.avatar || `User ${user.avatar}`,
+          userAvatar: userDetails?.avatar,
         };
       })
-      .sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
     return (
-      <SafeAreaView className="flex-1 bg-[#1CD6CE]">
-        <View className="flex-row items-center px-4 py-3">
-          <Link href="/" className="mr-auto">
-            <View className="w-8 h-8 justify-center">
-              <Text className="text-white text-2xl">←</Text>
-            </View>
-          </Link>
-          <Text className="text-white text-xl font-bold absolute left-0 right-0 text-center">
-            CHAT KONSULTASI
+      <SafeAreaView className="flex-1 bg-primary-500">
+        {/* PERBAIKAN: Menambahkan StatusBar */}
+        <StatusBar backgroundColor="#0BBEBB" style="light" />
+        <View className="flex-row items-center justify-between px-4 py-3">
+          <TouchableOpacity onPress={() => router.replace('/')} className="p-2 -ml-2">
+            <Ionicons name="arrow-back" size={24} color="white" />
+          </TouchableOpacity>
+          <Text className="text-white text-xl font-rubik-bold">
+            Chat Konsultasi
           </Text>
+          <View className="w-8" />
         </View>
 
-        <ScrollView className="flex-1 bg-white rounded-t-3xl">
+        <ScrollView className="flex-1 bg-gray-50 rounded-t-3xl">
+          {/* ... sisa kode tidak berubah ... */}
           <View className="p-4">
             {chatList.length > 0 ? (
               chatList.map(({ chatId, lastMessage, userId, unreadCount, userName, userAvatar }) => (
                 <Link
                   key={chatId}
-                  href={`/chat/${userId}`}
+                  href={{ pathname: '/(root)/(konsultasi)/chat/[id]', params: { id: userId } }}
                   asChild
                 >
-                  <TouchableOpacity 
-                    className="mb-4 bg-white rounded-xl border border-gray-100 shadow-sm p-4"
+                  <TouchableOpacity
+                    className="mb-4 bg-white rounded-2xl shadow-sm p-4 flex-row items-center"
                     style={{ elevation: 2 }}
                   >
-                    <View className="flex-row items-center">
-                      <View className="w-12 h-12 rounded-full bg-gray-100 items-center justify-center">
-                        {userAvatar ? (
-                          <Image 
-                            source={{ uri: userAvatar }}
-                            className="w-12 h-12 rounded-full"
-                          />
-                        ) : (
-                          <FontAwesome name="user-circle" size={30} color="#666" />
-                        )}
-                      </View>
-                      <View className="ml-3 flex-1">
-                        <Text className="font-bold text-gray-900">
-                          {userName}
+                    <View className="w-14 h-14 rounded-full bg-gray-100 items-center justify-center">
+                      {userAvatar ? (
+                        <Image
+                          source={{ uri: userAvatar }}
+                          className="w-14 h-14 rounded-full"
+                        />
+                      ) : (
+                        <FontAwesome name="user-circle" size={36} color="#ccc" />
+                      )}
+                    </View>
+                    <View className="ml-4 flex-1">
+                      <Text className="font-rubik-bold text-lg text-gray-900">
+                        {userName}
+                      </Text>
+                      {lastMessage && (
+                        <Text className="text-gray-500 text-sm mt-1" numberOfLines={1}>
+                          {lastMessage.text}
                         </Text>
-                        {lastMessage && (
-                          <>
-                            <Text className="text-gray-500 text-sm mt-1" numberOfLines={1}>
-                              {lastMessage.text}
-                            </Text>
-                            <Text className="text-gray-400 text-xs mt-1">
-                              {new Date(lastMessage.time).toLocaleString()}
-                            </Text>
-                          </>
-                        )}
-                      </View>
+                      )}
+                    </View>
+                    <View className="items-end">
+                      {lastMessage && (
+                        <Text className="text-gray-400 text-xs mb-1">
+                          {new Date(lastMessage.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </Text>
+                      )}
                       {unreadCount > 0 && (
-                        <View className="bg-red-500 rounded-full px-2 py-1 ml-2">
+                        <View className="bg-red-500 rounded-full w-6 h-6 items-center justify-center">
                           <Text className="text-white text-xs font-bold">
                             {unreadCount}
                           </Text>
@@ -129,9 +136,9 @@ const KonsultasiScreen = () => {
                 </Link>
               ))
             ) : (
-              <View className="py-8">
-                <Text className="text-center text-gray-500">
-                  Belum ada chat konsultasi
+              <View className="pt-20 items-center">
+                <Text className="text-center text-gray-500 font-rubik">
+                  Belum ada chat konsultasi.
                 </Text>
               </View>
             )}
@@ -141,100 +148,87 @@ const KonsultasiScreen = () => {
     );
   }
 
-  // For regular users, show nutritionist list
+  // --- Tampilan untuk Pengguna Biasa ---
   return (
-    <SafeAreaView className="flex-1 bg-[#1CD6CE]">
-      <View className="flex-row items-center pt-5 pb-2 mb-4 justify-between">
-        <TouchableOpacity onPress={() => router.replace('/')} className='mr-auto'>
-          <Ionicons name="arrow-back" size={24} color={"white"} className='ml-2' />
+    <SafeAreaView className="flex-1 bg-primary-500">
+        {/* PERBAIKAN: Menambahkan StatusBar */}
+        <StatusBar backgroundColor="#0BBEBB" style="light" />
+      <View className="flex-row items-center justify-between px-4 py-3">
+        <TouchableOpacity onPress={() => router.replace('/')} className="p-2 -ml-2">
+          <Ionicons name="arrow-back" size={24} color="white" />
         </TouchableOpacity>
-        <Text className="text-white text-xl font-bold  ml-4 ">RECALL</Text>
+        <Text className="text-white text-xl font-rubik-bold">
+          Pilih Ahli Gizi
+        </Text>
+        <View className="w-8" />
       </View>
-      <ScrollView 
-        className="flex-1 bg-white rounded-t-3xl"
-        removeClippedSubviews={true}
-      >
+
+      <ScrollView className="flex-1 bg-gray-50 rounded-t-3xl">
+         {/* ... sisa kode tidak berubah ... */}
         <View className="p-4">
           {nutritionists && nutritionists.length > 0 ? (
             nutritionists.map((nutritionist: Nutritionist) => (
               <Link
                 key={nutritionist.$id}
-                href={`/chat/${nutritionist.$id}`}
+                href={{ pathname: '/(root)/(konsultasi)/chat/[id]', params: { id: nutritionist.$id } }}
                 asChild
               >
-                <TouchableOpacity 
-                  className="mb-4 bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden"
-                  style={{ elevation: 2 }}
+                <TouchableOpacity
+                  className="mb-4 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"
+                  style={{ elevation: 3 }}
                 >
-                  {/* Header with Status */}
-                  <View className="flex-row items-center p-4 border-b border-gray-100">
-                    <View className="w-16 h-16 rounded-full bg-gray-100 items-center justify-center">
+                  <View className="flex-row items-center p-4">
+                    <View className="relative">
                       {nutritionist.avatar ? (
-                        <Image 
+                        <Image
                           source={{ uri: nutritionist.avatar }}
                           className="w-16 h-16 rounded-full"
                         />
                       ) : (
-                        <FontAwesome name="user-circle" size={40} color="#666" />
+                        <FontAwesome name="user-circle" size={50} color="#ccc" />
                       )}
+                      <View className={`absolute bottom-0 right-0 w-4 h-4 rounded-full border-2 border-white ${
+                        nutritionist.status === 'online' ? 'bg-green-500' : 'bg-gray-400'
+                      }`} />
                     </View>
                     <View className="ml-4 flex-1">
-                      <Text className="text-lg font-bold text-gray-900">
+                      <Text className="text-lg font-rubik-bold text-gray-900">
                         {nutritionist.name}
                       </Text>
-                      <View className="flex-row items-center mt-1">
-                        <View className={`w-2 h-2 rounded-full ${
-                          nutritionist.status === 'online' ? 'bg-green-500' : 'bg-gray-400'
-                        } mr-2`} />
-                        <Text className="text-sm text-gray-500 capitalize">
-                          {nutritionist.status}
-                        </Text>
-                        {unreadMessages[nutritionist.$id] > 0 && (
-                          <View className="ml-auto bg-red-500 rounded-full px-2 py-1">
-                            <Text className="text-xs text-white font-bold">
-                              {unreadMessages[nutritionist.$id]}
-                            </Text>
-                          </View>
-                        )}
-                      </View>
-                    </View>
-                  </View>
-
-                  {/* Specialist Info */}
-                  <View className="p-4 bg-gray-50">
-                    <View className="mb-2">
-                      <Text className="text-sm font-semibold text-gray-700">
-                        Spesialisasi:
-                      </Text>
-                      <Text className="text-sm text-gray-600">
-                        {nutritionist.specialization}
+                       <Text className="text-sm text-gray-600 capitalize mt-1">
+                        {nutritionist.status}
                       </Text>
                     </View>
-
-                    <View className="mb-2">
-                      <Text className="text-sm font-semibold text-gray-700">
-                        Tipe:
-                      </Text>
-                      <Text className="text-sm text-gray-600">
-                        {nutritionist.type}
-                      </Text>
-                    </View>
-
-                    {nutritionist.lastSeen && nutritionist.status === 'offline' && (
-                      <View>
-                        <Text className="text-xs text-gray-500">
-                          Terakhir online: {new Date(nutritionist.lastSeen).toLocaleString()}
+                    {unreadMessages[nutritionist.$id] > 0 && (
+                      <View className="bg-red-500 rounded-full w-6 h-6 items-center justify-center">
+                        <Text className="text-white text-xs font-bold">
+                          {unreadMessages[nutritionist.$id]}
                         </Text>
                       </View>
                     )}
+                  </View>
+                  
+                  <View className="px-4 pb-3 pt-2 bg-slate-50 border-t border-slate-100">
+                     <Text className="text-sm font-rubik-medium text-gray-700">
+                        Spesialisasi: <Text className="font-rubik">{nutritionist.specialization}</Text>
+                      </Text>
+                      <Text className="text-sm font-rubik-medium text-gray-700 mt-1">
+                        Tipe: <Text className="font-rubik">{nutritionist.type}</Text>
+                      </Text>
+
+                      {nutritionist.lastSeen && nutritionist.status === 'offline' && (
+                        <Text className="text-xs text-gray-500 mt-2">
+                          Terakhir online: {new Date(nutritionist.lastSeen).toLocaleString('id-ID')}
+                        </Text>
+                      )}
                   </View>
                 </TouchableOpacity>
               </Link>
             ))
           ) : (
-            <View className="py-8">
-              <Text className="text-center text-gray-500">
-                Tidak ada ahli gizi yang tersedia saat ini
+            <View className="pt-20 items-center">
+              <Text className="text-center text-gray-500 font-rubik">
+                Tidak ada ahli gizi yang tersedia saat ini.
               </Text>
             </View>
           )}

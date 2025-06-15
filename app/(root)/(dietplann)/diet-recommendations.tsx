@@ -138,12 +138,14 @@ const DietRecommendations = () => {
     <SafeAreaView className='bg-primary-400 h-full p-4'>
       <View className="flex-1 bg-primary-500 items-center-center rounded-xl mt-5">
         {/* Header Aplikasi */}
-        <View className="flex-row items-center pt-5 border-b border-white pb-2 mb-4">
+        <View className="flex-row items-center pt-5 border-b border-white pb-2 mb-6">
+          {/* Tombol Panah: Kembali ke halaman sebelumnya */}
           <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color={"white"} className='ml-2' />
+            <Ionicons name="arrow-back" size={24} color="white" className="ml-2" />
           </TouchableOpacity>
-          <Text className="text-white text-xl font-bold ml-4 ">DIET PLAN</Text>
-          <TouchableOpacity onPress={() => router.back()} className="ml-auto">
+          <Text className="text-white text-xl font-rubik-bold ml-4">DIET RECOMENDATIONS</Text>
+          {/* Tombol Silang: Kembali ke halaman utama */}
+          <TouchableOpacity onPress={() => router.replace('/')} className="ml-auto">
             <Text className="text-3xl text-white mr-4">×</Text>
           </TouchableOpacity>
         </View>

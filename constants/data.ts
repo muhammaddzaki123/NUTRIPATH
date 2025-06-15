@@ -1,3 +1,5 @@
+// constants/data.ts
+
 import images from "./images";
 
 // Interface untuk setiap bagian konten
@@ -13,10 +15,11 @@ export interface DiseaseInfo {
 }
 
 export interface DiseaseInformation {
-  [key: string]: DiseaseInfo;
+  [key:string]: DiseaseInfo;
 }
 
 export const diseaseInformation: DiseaseInformation = {
+  // ... (konten diseaseInformation tetap sama)
   hipertensi: {
     title: "Hipertensi",
     content: [
@@ -100,35 +103,41 @@ export const diseaseInformation: DiseaseInformation = {
   }
 };
 
+
 export const features = [
   {
-    title: "Recall Asupan 24 Jam",
+    title: "Food Record",
     description:
-      "Recall asupan 24 jam adalah fitur yang berfungsi melakukan pencatatan asupan makan selama 24 jam, untuk mengetahui dampak dari makanan tersebut terhadap kesehatan.",
-      image :  images.asupan,
+      "Food record asupan makan 24 jam adalah fitur yang berfungsi untuk melakukan pencatatan asupan makan selama 24 jam, fitur ini berfungsi untuk mengetahui apakah makanan yang dikonsumsi sudah sesuai dengan anjuran diet penderita.",
+    image: images.asupan,
+    route: "/recall", // Rute ke halaman Food Record
   },
   {
     title: "Artikel Gizi",
     description:
-      "Artikel gizi adalah fitur yang berisikan artikel-artikel gizi terkini yang selalu di up-date, yang bisa anda baca untuk menambah pengetahuan.",
-      image :  images.artikel,
+      "Jelajahi artikel-artikel gizi terkini yang selalu diperbarui untuk menambah wawasan kesehatan Anda.",
+    image: images.artikel,
+    route: "/artikel", // Rute ke halaman Artikel
   },
   {
     title: "Diet Plan",
     description:
-      "Diet plan adalah fitur diet yang dapat digunakan untuk menghitung kebutuhan kalori harian anda, serta melihat standar menu diet berdasarkan penyakit anda.",
-    image :  images.diet,
+      "Hitung kebutuhan kalori dan temukan rencana diet yang sesuai dengan kondisi kesehatan Anda.",
+    image: images.diet,
+    route: "/dietPlan", // Rute ke halaman Diet Plan
   },
   {
     title: "Konsultasi Gizi",
     description:
-      "Konsultasi gizi adalah fitur konsultasi langsung dengan ahli gizi guna mengkomunikasikan masalah gizi anda dan tindak lanjut solusi diet anda.",
+      "Diskusikan masalah gizi Anda langsung dengan ahli gizi terpercaya untuk mendapatkan solusi terbaik.",
     image: images.konsultasi,
+    route: "/konsultasi", // Rute ke halaman Konsultasi
   },
   {
     title: "Kalkulator Gizi",
     description:
-      "Kalkulator gizi adalah fitur untuk mengetahui status gizi anda serta menghitung berat badan ideal anda.",
+      "Hitung Indeks Massa Tubuh (IMT) dan Berat Badan Ideal (BBI) untuk mengetahui status gizi Anda.",
     image: images.kalkulator,
+    route: "/KalkulatorGizi", // Rute ke halaman Kalkulator Gizi
   },
-];
+]as const;
