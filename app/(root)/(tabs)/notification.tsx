@@ -1,5 +1,12 @@
 /// <reference lib="dom" />
-import { Redirect, Stack, useRouter } from 'expo-router';
+import { useChat } from '@/components/ChatContext';
+import NotificationItem from '@/components/NotificationItem';
+import { useGlobalContext } from '@/lib/global-provider';
+import { deleteNotification, getNotifications, markAllAsRead, markAsRead } from '@/lib/notification-service';
+import type { Notification } from '@/types/notification';
+import { formatTimestamp } from '@/utils/date';
+import { Stack, useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import type { ReactElement } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import {
@@ -13,12 +20,6 @@ import {
   View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useChat } from '../../../components/ChatContext';
-import NotificationItem from '../../../components/NotificationItem';
-import { useGlobalContext } from '../../../lib/global-provider';
-import { deleteNotification, getNotifications, markAllAsRead, markAsRead } from '../../../lib/notification-service';
-import type { Notification } from '../../../types/notification';
-import { formatTimestamp } from '../../../utils/date';
 
 const PAGE_SIZE = 10;
 
@@ -40,13 +41,11 @@ export default function NotificationScreen(): ReactElement {
   const [lastFetchTime, setLastFetchTime] = useState<number>(0);
 
   const fetchNotifications = async (pageNum = 1, shouldRefresh = false): Promise<void> => {
-    // Prevent multiple fetches within 500ms
     const now = Date.now();
     if (now - lastFetchTime < 500 || !user) return;
     setLastFetchTime(now);
 
     try {
-      // Log fetch attempt for debugging
       if (Platform.OS !== 'web') {
         console.log(`Fetching notifications: page ${pageNum}, refresh: ${shouldRefresh}`);
       }
@@ -58,14 +57,13 @@ export default function NotificationScreen(): ReactElement {
         pageSize: PAGE_SIZE
       });
 
-      const filteredNotifs = filterType === 'all' 
-        ? notifs 
+      const filteredNotifs = filterType === 'all'
+        ? notifs
         : notifs.filter((n: Notification) => n.type === filterType);
 
       setNotifications((prev: Array<Notification>) => {
         if (shouldRefresh) return filteredNotifs;
         
-        // Remove duplicates based on $id
         const existingIds = new Set(prev.map((n: Notification) => n.$id));
         const newNotifs = filteredNotifs.filter((n: Notification) => !existingIds.has(n.$id));
         return [...prev, ...newNotifs];
@@ -88,7 +86,10 @@ export default function NotificationScreen(): ReactElement {
     let timeoutId: ReturnType<typeof setTimeout>;
 
     const init = () => {
-      if (!user || !mounted) return;
+      if (!user || !mounted) {
+        setLoading(false); // Hentikan loading jika user tidak login
+        return;
+      }
       
       if (timeoutId) {
         clearTimeout(timeoutId);
@@ -113,7 +114,7 @@ export default function NotificationScreen(): ReactElement {
   }, [user?.$id, filterType]);
 
   const handleRefresh = (): void => {
-    if (refreshing) return;
+    if (refreshing || !user) return;
     setRefreshing(true);
     fetchNotifications(1, true);
   };
@@ -122,7 +123,7 @@ export default function NotificationScreen(): ReactElement {
     if (!hasMore || loading || refreshing) return;
     fetchNotifications(page + 1);
   };
-
+  
   const handleNotificationPress = async (notification: Notification): Promise<void> => {
     try {
       if (!notification.read) {
@@ -139,43 +140,34 @@ export default function NotificationScreen(): ReactElement {
           if (!notification.data || !user) break;
 
           try {
-            // Parse notification data
             const notifData = typeof notification.data === 'string' 
               ? JSON.parse(notification.data) 
               : notification.data;
 
             const chatId = notifData?.chatId as string;
 
-            // Validasi data yang diperlukan
             if (!chatId) {
               if (Platform.OS !== 'web') {
                 console.warn('Chat ID tidak ditemukan dalam notifikasi:', notification.data);
               }
               break;
             }
-
-            // --- PERBAIKAN DIMULAI DI SINI ---
-            // 1. Pisahkan string chatId untuk mendapatkan ID user dan ahli gizi
             const ids = chatId.split('-');
             const userIdFromChat = ids[0];
             const nutritionistIdFromChat = ids[1];
 
-            // 2. Tentukan ID partner chat berdasarkan tipe user yang sedang login
             const partnerId = user.userType === 'nutritionist' 
                 ? userIdFromChat 
                 : nutritionistIdFromChat;
             
-            // Debug log
             if (Platform.OS !== 'web') {
               console.log(`[Chat] Opening: Navigating to chat with partner ID: ${partnerId}`);
             }
 
-            // 3. Gunakan partnerId yang benar untuk navigasi
             router.push({
               pathname: "/(root)/(konsultasi)/chat/[id]",
-              params: { id: partnerId } // Menggunakan ID partner yang benar
+              params: { id: partnerId } 
             });
-            // --- PERBAIKAN SELESAI ---
 
           } catch (err) {
             if (Platform.OS !== 'web') {
@@ -241,16 +233,13 @@ export default function NotificationScreen(): ReactElement {
     </TouchableOpacity>
   );
 
-  // Memoize grouped notifications
   const groupedData = useMemo(() => {
     const groups: { [key: string]: Array<Notification> } = {};
     
-    // Sort notifications by timestamp (newest first)
     const sortedNotifications = [...notifications].sort((a: Notification, b: Notification) => 
       new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
     );
 
-    // Group by date and ensure no duplicates
     sortedNotifications.forEach((notification: Notification) => {
       const date = formatTimestamp(notification.timestamp);
       if (!groups[date]) {
@@ -267,8 +256,23 @@ export default function NotificationScreen(): ReactElement {
     }));
   }, [notifications]);
 
+  // **PERBAIKAN: Tampilkan halaman login jika user belum terautentikasi**
   if (!user) {
-    return <Redirect href="/sign-in" />;
+    return (
+      <SafeAreaView className="flex-1 bg-primary-500 items-center justify-center">
+        <StatusBar backgroundColor="#0BBEBB" style="light" />
+        <Text className="text-white text-lg mb-4 text-center px-8">
+          Anda harus login untuk melihat notifikasi.
+        </Text>
+        <TouchableOpacity
+          // --- PERBAIKAN DI SINI ---
+          onPress={() => router.push('/sign-in')} // Ganti dari .replace() menjadi .push()
+          className="bg-white px-8 py-3 rounded-full shadow-lg"
+        >
+          <Text className="text-primary-500 font-rubik-bold text-base">Login Sekarang</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
   }
 
   if (loading && !refreshing && notifications.length === 0) {
@@ -280,7 +284,7 @@ export default function NotificationScreen(): ReactElement {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
+    <SafeAreaView className="flex-1 bg-gray-50 mb-8 pb-8">
       <Stack.Screen options={{ headerShown: false }} />
       
       <View className="px-4 py-4 bg-white border-b border-gray-200">

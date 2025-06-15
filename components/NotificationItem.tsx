@@ -29,6 +29,7 @@ const getIcon = (type: 'chat' | 'article' | 'recall'): { name: "comment" | "news
 };
 
 const NotificationItem: React.FC<NotificationItemProps> = ({
+  id,
   type,
   title,
   description,
