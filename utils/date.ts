@@ -1,4 +1,6 @@
-// List of relative time patterns to detect already formatted strings
+// utils/date.ts
+
+// Daftar pola waktu relatif untuk mendeteksi string yang sudah diformat
 const relativeTimePatterns = [
   /^Baru saja$/,
   /^\d+ menit yang lalu$/,
@@ -6,7 +8,7 @@ const relativeTimePatterns = [
   /^\d+ hari yang lalu$/
 ];
 
-// Check if string is already in relative time format
+// Periksa apakah string sudah dalam format waktu relatif
 const isRelativeTimeFormat = (text: string): boolean => {
   return relativeTimePatterns.some(pattern => pattern.test(text));
 };
@@ -15,81 +17,83 @@ export const formatTimestamp = (timestamp: string | number | Date): string => {
   try {
     let date: Date;
     
-    // Handle Date object
+    // Tangani objek Date
     if (timestamp instanceof Date) {
       date = timestamp;
     }
-    // Handle string timestamp
+    // Tangani stempel waktu string
     else if (typeof timestamp === 'string') {
-      // Check if already in relative time format
+      // Periksa apakah sudah dalam format waktu relatif
       const cleanTimestamp = timestamp.trim();
       if (isRelativeTimeFormat(cleanTimestamp)) {
-        return cleanTimestamp; // Return as-is if already formatted
+        return cleanTimestamp; // Kembalikan apa adanya jika sudah diformat
       }
 
-      // Try parsing as ISO string
+      // Coba parsing sebagai string ISO
       date = new Date(cleanTimestamp);
       
-      // Validate parsed date
+      // Validasi tanggal yang sudah di-parse
       if (isNaN(date.getTime())) {
         throw new Error('Invalid ISO string format');
       }
     }
-    // Handle numeric timestamp (fallback)
+    // Tangani stempel waktu numerik (fallback)
     else if (typeof timestamp === 'number') {
-      // Assume milliseconds for consistency with ISO string parsing
+      // Asumsikan milidetik untuk konsistensi dengan parsing string ISO
       date = new Date(timestamp);
       
-      // Validate parsed date
+      // Validasi tanggal yang sudah di-parse
       if (isNaN(date.getTime())) {
         throw new Error('Invalid numeric timestamp');
       }
     }
-    // Handle invalid input
+    // Tangani input yang tidak valid
     else {
       throw new Error('Invalid timestamp type');
     }
 
-    // Final validation
+    // Validasi akhir
     if (!date || isNaN(date.getTime())) {
       throw new Error('Invalid date object created');
     }
 
-    // Get user's timezone offset in minutes
-    const timezoneOffset = date.getTimezoneOffset();
-    
-    // Adjust date for Indonesia timezone (UTC+7)
-    const indonesiaOffset = -420; // UTC+7 in minutes
-    const adjustedDate = new Date(date.getTime() + (indonesiaOffset + timezoneOffset) * 60000);
+    // --- PERBAIKAN DIMULAI DI SINI ---
+    // Logika penyesuaian zona waktu manual yang salah telah dihapus.
+    // Sekarang kita langsung menggunakan objek 'date' yang sudah benar
+    // karena objek Date JavaScript secara otomatis menangani zona waktu.
 
-    // Calculate time difference in minutes
     const now = new Date();
-    const diffInMinutes = Math.floor((now.getTime() - adjustedDate.getTime()) / (1000 * 60));
+    // Hitung selisih waktu dalam menit secara langsung
+    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
 
-    // Use relative time for recent notifications
+    // Gunakan waktu relatif untuk notifikasi baru
     if (diffInMinutes < 1) {
       return 'Baru saja';
     } else if (diffInMinutes < 60) {
       return `${diffInMinutes} menit yang lalu`;
-    } else if (diffInMinutes < 1440) { // Less than 24 hours
+    } else if (diffInMinutes < 1440) { // Kurang dari 24 jam
       const hours = Math.floor(diffInMinutes / 60);
       return `${hours} jam yang lalu`;
-    } else if (diffInMinutes < 10080) { // Less than 7 days
+    } else if (diffInMinutes < 10080) { // Kurang dari 7 hari
       const days = Math.floor(diffInMinutes / 1440);
       return `${days} hari yang lalu`;
     }
 
-    // For older notifications, use full date format
+    // Untuk notifikasi yang lebih lama, gunakan format tanggal lengkap
+    // Ini akan secara otomatis menggunakan zona waktu lokal perangkat
     const formatter = new Intl.DateTimeFormat('id-ID', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
-      hour12: false // Use 24-hour format
+      hour12: false // Gunakan format 24 jam
     });
 
-    return formatter.format(adjustedDate);
+    // Gunakan objek 'date' yang asli untuk pemformatan
+    return formatter.format(date);
+    // --- PERBAIKAN SELESAI ---
+
   } catch (error) {
     console.error('Error formatting timestamp:', {
       error: (error as Error).message,
@@ -98,7 +102,7 @@ export const formatTimestamp = (timestamp: string | number | Date): string => {
       originalValue: timestamp
     });
     
-    // Return a more informative string instead of current date
+    // Kembalikan string yang lebih informatif daripada tanggal saat ini
     return 'Format waktu tidak valid';
   }
 };
