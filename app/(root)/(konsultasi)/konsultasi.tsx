@@ -1,11 +1,9 @@
-// app/(root)/(konsultasi)/konsultasi.tsx
-
 import { useChat } from '@/components/ChatContext';
-import { Nutritionist } from '@/constants/chat';
+import { Nutritionist, User } from '@/constants/chat';
 import { useGlobalContext } from '@/lib/global-provider';
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
-import { StatusBar } from 'expo-status-bar'; 
 import { Link, useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import React, { useState } from 'react';
 import { ActivityIndicator, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -57,7 +55,8 @@ const KonsultasiScreen = () => {
         const unreadCount = chatMessages.filter(
           msg => !msg.read && msg.sender === 'user'
         ).length;
-        const userDetails = lastMessage?.userDetails;
+        const userDetails = lastMessage?.userDetails as User & { status?: 'online' | 'offline'; lastSeen?: string };
+
         return {
           chatId,
           lastMessage,
@@ -66,13 +65,14 @@ const KonsultasiScreen = () => {
           timestamp: lastMessage?.time || '',
           userName: userDetails?.name || `User ${userId}`,
           userAvatar: userDetails?.avatar,
+          userStatus: userDetails?.status,
+          userLastSeen: userDetails?.lastSeen,
         };
       })
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
     return (
       <SafeAreaView className="flex-1 bg-primary-500">
-        {/* PERBAIKAN: Menambahkan StatusBar */}
         <StatusBar backgroundColor="#0BBEBB" style="light" />
         <View className="flex-row items-center justify-between px-4 py-3">
           <TouchableOpacity onPress={() => router.replace('/')} className="p-2 -ml-2">
@@ -85,52 +85,66 @@ const KonsultasiScreen = () => {
         </View>
 
         <ScrollView className="flex-1 bg-gray-50 rounded-t-3xl">
-          {/* ... sisa kode tidak berubah ... */}
           <View className="p-4">
             {chatList.length > 0 ? (
-              chatList.map(({ chatId, lastMessage, userId, unreadCount, userName, userAvatar }) => (
+              chatList.map(({ chatId, lastMessage, userId, unreadCount, userName, userAvatar, userStatus, userLastSeen }) => (
                 <Link
                   key={chatId}
                   href={{ pathname: '/(root)/(konsultasi)/chat/[id]', params: { id: userId } }}
                   asChild
                 >
                   <TouchableOpacity
-                    className="mb-4 bg-white rounded-2xl shadow-sm p-4 flex-row items-center"
-                    style={{ elevation: 2 }}
+                    className="mb-4 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"
+                    style={{ elevation: 3 }}
                   >
-                    <View className="w-14 h-14 rounded-full bg-gray-100 items-center justify-center">
-                      {userAvatar ? (
-                        <Image
-                          source={{ uri: userAvatar }}
-                          className="w-14 h-14 rounded-full"
-                        />
-                      ) : (
-                        <FontAwesome name="user-circle" size={36} color="#ccc" />
-                      )}
-                    </View>
-                    <View className="ml-4 flex-1">
-                      <Text className="font-rubik-bold text-lg text-gray-900">
-                        {userName}
-                      </Text>
-                      {lastMessage && (
-                        <Text className="text-gray-500 text-sm mt-1" numberOfLines={1}>
-                          {lastMessage.text}
+                    <View className="flex-row items-center p-4">
+                      <View className="relative">
+                        {userAvatar ? (
+                          <Image
+                            source={{ uri: userAvatar }}
+                            className="w-14 h-14 rounded-full"
+                          />
+                        ) : (
+                          <FontAwesome name="user-circle" size={36} color="#ccc" />
+                        )}
+                        <View className={`absolute bottom-0 right-0 w-4 h-4 rounded-full border-2 border-white ${
+                          userStatus === 'online' ? 'bg-green-500' : 'bg-gray-400'
+                        }`} />
+                      </View>
+                      <View className="ml-4 flex-1">
+                        <Text className="font-rubik-bold text-lg text-gray-900">
+                          {userName}
                         </Text>
-                      )}
-                    </View>
-                    <View className="items-end">
-                      {lastMessage && (
-                        <Text className="text-gray-400 text-xs mb-1">
-                          {new Date(lastMessage.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </Text>
-                      )}
-                      {unreadCount > 0 && (
-                        <View className="bg-red-500 rounded-full w-6 h-6 items-center justify-center">
-                          <Text className="text-white text-xs font-bold">
-                            {unreadCount}
+                        {lastMessage && (
+                          <Text className="text-gray-500 text-sm mt-1" numberOfLines={1}>
+                            {lastMessage.text}
                           </Text>
-                        </View>
-                      )}
+                        )}
+                      </View>
+                      <View className="items-end">
+                        {lastMessage && (
+                          <Text className="text-gray-400 text-xs mb-1">
+                            {new Date(lastMessage.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </Text>
+                        )}
+                        {unreadCount > 0 && (
+                          <View className="bg-red-500 rounded-full w-6 h-6 items-center justify-center">
+                            <Text className="text-white text-xs font-bold">
+                              {unreadCount}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    </View>
+                    <View className="px-4 pb-3 pt-2 bg-slate-50 border-t border-slate-100">
+                       <Text className="text-sm font-rubik-medium text-gray-700 capitalize">
+                          Status: <Text className="font-rubik">{userStatus}</Text>
+                        </Text>
+                        {userLastSeen && userStatus === 'offline' && (
+                          <Text className="text-xs text-gray-500 mt-2">
+                            Terakhir online: {new Date(userLastSeen).toLocaleString('id-ID')}
+                          </Text>
+                        )}
                     </View>
                   </TouchableOpacity>
                 </Link>
@@ -151,7 +165,6 @@ const KonsultasiScreen = () => {
   // --- Tampilan untuk Pengguna Biasa ---
   return (
     <SafeAreaView className="flex-1 bg-primary-500">
-        {/* PERBAIKAN: Menambahkan StatusBar */}
         <StatusBar backgroundColor="#0BBEBB" style="light" />
       <View className="flex-row items-center justify-between px-4 py-3">
         <TouchableOpacity onPress={() => router.replace('/')} className="p-2 -ml-2">
@@ -164,7 +177,6 @@ const KonsultasiScreen = () => {
       </View>
 
       <ScrollView className="flex-1 bg-gray-50 rounded-t-3xl">
-         {/* ... sisa kode tidak berubah ... */}
         <View className="p-4">
           {nutritionists && nutritionists.length > 0 ? (
             nutritionists.map((nutritionist: Nutritionist) => (

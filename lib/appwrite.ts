@@ -37,6 +37,24 @@ export const storage = new Storage(client);
 // Simpan data user yang sedang login
 let currentUser: any = null;
 
+// Fungsi baru untuk memperbarui status pengguna
+export async function updateUserStatus(userId: string, status: 'online' | 'offline') {
+    try {
+        await databases.updateDocument(
+            config.databaseId!,
+            config.usersProfileCollectionId!,
+            userId,
+            {
+                status,
+                lastSeen: new Date().toISOString()
+            }
+        );
+    } catch (error) {
+        console.error('Error updating user status:', error);
+    }
+}
+
+
 export async function getCurrentUser() {
   try {
     if (!currentUser) {
@@ -58,7 +76,9 @@ export async function getCurrentUser() {
       freshUserData = {
         ...currentUser,
         avatar: response.avatar || currentUser.avatar,
-        specialization: response.specialization
+        specialization: response.specialization,
+        status: response.status,
+        lastSeen: response.lastSeen,
       };
     } else {
       const response = await databases.getDocument(
@@ -70,7 +90,9 @@ export async function getCurrentUser() {
       freshUserData = {
         ...currentUser,
         avatar: response.avatar || currentUser.avatar,
-        disease: response.disease || null // Include disease information for users
+        disease: response.disease || null, // Include disease information for users
+        status: response.status, // Ambil status pengguna
+        lastSeen: response.lastSeen, // Ambil lastSeen pengguna
       };
     }
 
@@ -119,18 +141,9 @@ export async function loginUser(email: string, password: string) {
         console.log("Login berhasil untuk user:", user.email);
 
         try {
-          if (user.userType !== "user") {
-            await databases.updateDocument(
-              config.databaseId!,
-              config.usersProfileCollectionId!,
-              user.$id,
-              {
-                userType: "user",
-                lastSeen: new Date().toISOString()
-              }
-            );
-          }
-
+          // Perbarui status menjadi online
+          await updateUserStatus(user.$id, 'online');
+          
           // Simpan data user yang login dengan informasi lengkap
           currentUser = {
             $id: user.$id,
@@ -143,6 +156,7 @@ export async function loginUser(email: string, password: string) {
             weight: user.weight || null,
             age: user.age || null,
             gender: user.gender || null,
+            status: 'online', // Tambahkan status
             lastSeen: new Date().toISOString()
           };
 
@@ -256,8 +270,16 @@ export async function loginNutritionist(email: string, password: string) {
   }
 }
 
+// Fungsi logout yang dimodifikasi untuk menangani kedua tipe pengguna
 export async function logout() {
   try {
+    if (currentUser) {
+      if (currentUser.userType === 'nutritionist') {
+        await logoutNutritionist(currentUser.$id);
+      } else {
+        await logoutUser(currentUser.$id);
+      }
+    }
     currentUser = null;
     console.log("User logged out, currentUser cleared");
     return true;
@@ -266,6 +288,19 @@ export async function logout() {
     return false;
   }
 }
+
+
+// Fungsi baru untuk logout pengguna biasa
+export async function logoutUser(userId: string) {
+  try {
+    await updateUserStatus(userId, 'offline');
+    console.log("User status updated to offline");
+  } catch (error) {
+    console.error('Logout error for user:', error);
+    throw error;
+  }
+}
+
 
 export async function logoutNutritionist(nutritionistId: string) {
   try {
@@ -278,7 +313,6 @@ export async function logoutNutritionist(nutritionistId: string) {
         lastSeen: new Date().toISOString()
       }
     );
-    currentUser = null;
     console.log("Nutritionist logged out, currentUser cleared");
     return true;
   } catch (error) {
