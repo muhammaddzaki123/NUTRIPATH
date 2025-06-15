@@ -9,9 +9,10 @@ export interface FoodInput {
 }
 
 export interface MealData {
-  carbs: FoodInput;
+  carbs: FoodInput[];
   others: FoodInput[];
   snacks: FoodInput[];
+  mealTime?: string | null;
 }
 
 export interface RecallData {
@@ -122,46 +123,55 @@ export const shareFoodRecallInChat = async (
     const recall = await getFoodRecallById(recallId);
     
     // Format the recall data as a message
-    const formatMeal = (meal: MealData) => {
+const formatMeal = (meal: MealData) => {
       const foods = [];
-      if (meal.carbs.name) {
-        foods.push(`Karbohidrat: ${meal.carbs.name} (${meal.carbs.amount} ${meal.carbs.unit})`);
+      
+      // Add meal time if available
+      if (meal.mealTime) {
+        foods.push(`⏰ Waktu: ${meal.mealTime}`);
       }
-      const otherFoods = meal.others.filter(f => f.name).map(f => 
-        `- ${f.name} (${f.amount} ${f.unit})`
+
+      // Add carbs
+      // Process each type of food
+      const carbFoods = meal.carbs.filter(f => f.name).map(f =>
+        `🍚 Karbohidrat: ${f.name} (${f.amount} ${f.unit})`
       );
+      
+      const otherFoods = meal.others.filter(f => f.name).map(f => 
+        `🍖 Lauk: ${f.name} (${f.amount} ${f.unit})`
+      );
+
       const snackFoods = meal.snacks.filter(f => f.name).map(f => 
-        `- ${f.name} (${f.amount} ${f.unit})`
+        `🍎 Selingan: ${f.name} (${f.amount} ${f.unit})`
       );
       
       return [
         ...foods,
-        otherFoods.length ? '\nLauk Pauk:' : '',
+        ...carbFoods,
         ...otherFoods,
-        snackFoods.length ? '\nSelingan:' : '',
         ...snackFoods
       ].join('\n');
     };
 
     const recallSummary = `
-Food Recall Data:
-Nama: ${recall.name}
-Usia: ${recall.age}
-Jenis Kelamin: ${recall.gender}
-Riwayat Penyakit: ${recall.disease}
+📋 Food Recall Data:
+👤 Nama: ${recall.name}
+📅 Usia: ${recall.age}
+⚧ Jenis Kelamin: ${recall.gender}
+🏥 Riwayat Penyakit: ${recall.disease}
 
-=== Makan Pagi ===
+🌅 === MAKAN PAGI ===
 ${formatMeal(recall.breakfast)}
 
-=== Makan Siang ===
+☀️ === MAKAN SIANG ===
 ${formatMeal(recall.lunch)}
 
-=== Makan Malam ===
+🌙 === MAKAN MALAM ===
 ${formatMeal(recall.dinner)}
 
-${recall.warningFoods.length ? `\n⚠️ Makanan yang Melebihi Batas:
+${recall.warningFoods.length ? `\n⚠️ PERINGATAN - Makanan yang Melebihi Batas:
 ${recall.warningFoods.map((food: FoodInput) => 
-  `- ${food.name}: ${food.amount} ${food.unit}`
+  `❗ ${food.name}: ${food.amount} ${food.unit}`
 ).join('\n')}` : ''}
     `.trim();
 
