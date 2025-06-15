@@ -13,7 +13,21 @@ type FoodInput = {
   unit: string;
 };
 
+// Types for meal data
 type MealType = 'breakfast' | 'lunch' | 'dinner';
+type MealLabel = 'Sarapan' | 'Makan Siang' | 'Makan Malam';
+
+// Types for food data
+interface EnhancedFoodInput extends FoodInput {
+  mealType: MealType;
+  mealLabel: MealLabel;
+  mealTime: string;
+}
+
+interface WarningFoodInput extends EnhancedFoodInput {
+  maxAllowed: number;
+  warningMessage: string;
+}
 
 interface MealData {
   carbs: FoodInput[];
@@ -214,46 +228,85 @@ export default function FoodRecallScreen() {
     } else if (mealType === 'lunch') {
       setMealType('dinner');
     } else {
-      const allFoods: FoodInput[] = [];
       const mealTypes: MealType[] = ['breakfast', 'lunch', 'dinner'];
       const categories: Array<keyof Omit<MealData, 'mealTime'>> = ['carbs', 'others', 'snacks'];
-      
-      mealTypes.forEach((mealTime) => {
-        const meal = meals[mealTime];
-        categories.forEach(category => {
-          meal[category].forEach(food => {
-            if (food.name) allFoods.push(food);
-          });
-        });
+
+      const restrictions = foodRestrictions[disease] || [];
+      // First, associate each food with its meal type and time
+      const foodsWithMealInfo: EnhancedFoodInput[] = mealTypes.flatMap(mealType => {
+        const meal = meals[mealType];
+        const mealLabel = mealType === 'breakfast' ? 'Sarapan' :
+                         mealType === 'lunch' ? 'Makan Siang' : 'Makan Malam';
+        return categories.flatMap(category => 
+          meal[category]
+            .filter(food => food.name.trim() !== '') // Only include foods with names
+            .map(food => ({
+              ...food,
+              mealType,
+              mealLabel,
+              mealTime: meal.mealTime?.toLocaleTimeString('id-ID', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+              }) || 'Waktu tidak diatur'
+            }))
+        );
       });
 
-const restrictions = foodRestrictions[disease] || [];
-      const warningFoods = allFoods.filter(food => {
-        const restriction = restrictions.find((r: { name: string; maxAmount: number }) => 
-          r.name.toLowerCase() === food.name.toLowerCase()
-        );
-        return restriction && parseInt(food.amount) > restriction.maxAmount;
-      });
+      // Then filter and transform warning foods
+      const warningFoods: WarningFoodInput[] = foodsWithMealInfo
+        .map(food => {
+          const restriction = restrictions.find((r: { name: string; maxAmount: number; unit: string }) => 
+            r.name.toLowerCase() === food.name.toLowerCase()
+          );
+          if (restriction && parseInt(food.amount) > restriction.maxAmount) {
+            return {
+              ...food,
+              maxAllowed: restriction.maxAmount,
+              warningMessage: `${food.name} (${food.mealLabel} - ${food.mealTime}): Melebihi batas ${restriction.maxAmount} ${restriction.unit}`
+            };
+          }
+          return null;
+        })
+        .filter((item): item is NonNullable<typeof item> => item !== null);
 
       const { name, age, gender } = params;
+
+      const mealsWithTime = {
+        breakfast: {
+          ...meals.breakfast,
+          mealTime: meals.breakfast.mealTime?.toLocaleTimeString('id-ID', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+          }) || null
+        },
+        lunch: {
+          ...meals.lunch,
+          mealTime: meals.lunch.mealTime?.toLocaleTimeString('id-ID', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+          }) || null
+        },
+        dinner: {
+          ...meals.dinner,
+          mealTime: meals.dinner.mealTime?.toLocaleTimeString('id-ID', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+          }) || null
+        }
+      };
 
       router.push({
         pathname: '/warning',
         params: {
           warningFoods: JSON.stringify(warningFoods),
           name, age, gender, disease,
-          breakfast: JSON.stringify({
-            ...meals.breakfast,
-            mealTime: meals.breakfast.mealTime?.toISOString()
-          }),
-          lunch: JSON.stringify({
-            ...meals.lunch,
-            mealTime: meals.lunch.mealTime?.toISOString()
-          }),
-          dinner: JSON.stringify({
-            ...meals.dinner,
-            mealTime: meals.dinner.mealTime?.toISOString()
-          })
+          breakfast: JSON.stringify(mealsWithTime.breakfast),
+          lunch: JSON.stringify(mealsWithTime.lunch),
+          dinner: JSON.stringify(mealsWithTime.dinner)
         }
       });
     }

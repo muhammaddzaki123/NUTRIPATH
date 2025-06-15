@@ -144,36 +144,39 @@ export default function NotificationScreen(): ReactElement {
               ? JSON.parse(notification.data) 
               : notification.data;
 
+            const chatId = notifData?.chatId as string;
+
             // Validasi data yang diperlukan
-            if (!notifData?.chatId) {
+            if (!chatId) {
               if (Platform.OS !== 'web') {
                 console.warn('Chat ID tidak ditemukan dalam notifikasi:', notification.data);
               }
               break;
             }
 
-            // Extract chatId from notification
-            const chatId = notifData?.chatId;
-            if (!chatId) {
-              if (Platform.OS !== 'web') {
-                console.warn('[Chat] Failed:', {
-                  reason: 'missing_chat_id',
-                  notification: notification.$id
-                });
-              }
-              break;
-            }
+            // --- PERBAIKAN DIMULAI DI SINI ---
+            // 1. Pisahkan string chatId untuk mendapatkan ID user dan ahli gizi
+            const ids = chatId.split('-');
+            const userIdFromChat = ids[0];
+            const nutritionistIdFromChat = ids[1];
 
+            // 2. Tentukan ID partner chat berdasarkan tipe user yang sedang login
+            const partnerId = user.userType === 'nutritionist' 
+                ? userIdFromChat 
+                : nutritionistIdFromChat;
+            
             // Debug log
             if (Platform.OS !== 'web') {
-              console.log('[Chat] Opening:', chatId);
+              console.log(`[Chat] Opening: Navigating to chat with partner ID: ${partnerId}`);
             }
 
-            // Route to chat
+            // 3. Gunakan partnerId yang benar untuk navigasi
             router.push({
               pathname: "/(root)/(konsultasi)/chat/[id]",
-              params: { id: chatId }
+              params: { id: partnerId } // Menggunakan ID partner yang benar
             });
+            // --- PERBAIKAN SELESAI ---
+
           } catch (err) {
             if (Platform.OS !== 'web') {
               console.warn('Chat routing error:', err);
