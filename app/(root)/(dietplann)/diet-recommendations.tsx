@@ -127,6 +127,7 @@ const DietRecommendations = () => {
               {plan.meals && plan.meals.siang && renderMealSection("Siang", plan.meals.siang)}
               {plan.meals && plan.meals.selinganSiang && renderMealSection("Selingan Siang", plan.meals.selinganSiang)}
               {plan.meals && plan.meals.malam && renderMealSection("Malam", plan.meals.malam)}
+               {plan.meals && plan.meals.selinganMalam && renderMealSection("Selingan Malam", plan.meals.selinganMalam)}
             </ScrollView>
           </View>
         </ScrollView>
