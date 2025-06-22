@@ -54,15 +54,8 @@ type UserProfile = Models.Document & {
   specialization?: 'hipertensi' | 'diabetes' | 'kanker';
   age?: string;
   gender?: string;
-  // Properti lain bisa ditambahkan di sini
 };
 
-/**
- * Memperbarui status online/offline untuk user atau ahli gizi.
- * @param userId - ID dari pengguna atau ahli gizi.
- * @param userType - Tipe pengguna ('user' atau 'nutritionist').
- * @param status - Status baru ('online' atau 'offline').
- */
 async function updateUserStatus(userId: string, userType: 'user' | 'nutritionist', status: 'online' | 'offline'): Promise<void> {
   const collectionId = userType === 'user'
     ? config.usersProfileCollectionId!
@@ -77,70 +70,44 @@ async function updateUserStatus(userId: string, userType: 'user' | 'nutritionist
     );
   } catch (error) {
     console.error(`Gagal memperbarui status untuk ${userType} dengan ID ${userId}:`, error);
-    // Tidak melempar error agar proses utama (login/logout) tetap berjalan
   }
 }
 
-/**
- * Fungsi login yang aman dan terpusat untuk semua jenis pengguna.
- * @param email - Email untuk login.
- * @param password - Password untuk login.
- * @returns Data profil lengkap dari pengguna yang berhasil login.
- */
 export async function signIn(email: string, password: string): Promise<UserProfile> {
   try {
-    // 1. Hapus sesi yang mungkin masih ada
-    await account.deleteSession("current").catch(() => { /* Abaikan jika tidak ada sesi */ });
-
-    // 2. Buat sesi baru menggunakan layanan Akun Appwrite (INI PROSES YANG AMAN)
+    await account.deleteSession("current").catch(() => { });
     await account.createEmailPasswordSession(email, password);
-    
-    // 3. Ambil data pengguna yang sudah terverifikasi dari database
     const user = await getCurrentUser();
-    
     if (!user) {
-      // Jika akun berhasil diautentikasi tapi tidak punya profil di database,
-      // hapus sesi yang baru dibuat dan lempar error.
       await account.deleteSession("current");
       throw new Error("Profil pengguna tidak ditemukan. Silakan hubungi administrator.");
     }
-    
-    // 4. Perbarui status pengguna menjadi 'online' di koleksi yang benar
+
     await updateUserStatus(user.$id, user.userType, 'online');
-    
-    // 5. Kembalikan data profil pengguna
     return user;
   } catch (error: any) {
     console.error("Error pada fungsi signIn:", error);
-    // Melempar error agar bisa ditangkap oleh UI
     throw new Error(error.message || "Email atau password yang Anda masukkan salah.");
   }
 }
 
 /**
- * Mengambil data profil lengkap dari pengguna yang sedang memiliki sesi aktif.
- * Fungsi ini akan memeriksa sesi di Appwrite, lalu mencari profil di koleksi user dan ahli gizi.
  * @returns Data profil pengguna atau null jika tidak ada sesi aktif.
  */
 export async function getCurrentUser(): Promise<UserProfile | null> {
   try {
     const currentAccount = await account.get();
     if (!currentAccount) return null;
-
-    // Prioritaskan mencari di koleksi pengguna biasa (users) terlebih dahulu
     try {
       const userProfile = await databases.getDocument(
         config.databaseId!,
         config.usersProfileCollectionId!,
         currentAccount.$id
       );
-      // Tambahkan properti `userType` untuk mempermudah identifikasi di aplikasi
       return { ...userProfile, userType: 'user' } as UserProfile;
     } catch (e) {
-      // Jika tidak ditemukan, abaikan error dan lanjutkan mencari di koleksi ahli gizi
     }
 
-    // Jika tidak ada di koleksi pengguna, cari di koleksi ahli gizi
     try {
       const nutritionistProfile = await databases.getDocument(
         config.databaseId!,
@@ -149,12 +116,10 @@ export async function getCurrentUser(): Promise<UserProfile | null> {
       );
       return { ...nutritionistProfile, userType: 'nutritionist' } as UserProfile;
     } catch (e) {
-      // Jika tidak ditemukan di kedua koleksi, berarti profil belum dibuat
       console.error("Akun valid, tetapi profil tidak ditemukan di database:", currentAccount.$id);
       return null;
     }
   } catch (error) {
-    // Jika tidak ada sesi aktif sama sekali (paling umum)
     return null;
   }
 }
