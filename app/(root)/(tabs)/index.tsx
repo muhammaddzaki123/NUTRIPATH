@@ -15,12 +15,18 @@ const Home = () => {
   const { articles, loading, error } = useArticles();
 
   const handleLogout = async () => {
-    const result = await logout();
-    if (result) {
-      Alert.alert("Success", "Logged out successfully");
-      refetch(); // Memperbarui status user setelah logout
-    } else {
-      Alert.alert("Error", "Failed to logout");
+    try {
+      // Panggil fungsi logout. Jika tidak ada error, berarti proses berhasil.
+      await logout();
+      
+      // Tampilkan pesan sukses dan perbarui state global.
+      Alert.alert("Sukses", "Anda telah berhasil logout.");
+      await refetch(); // Memperbarui status user setelah logout
+
+    } catch (e: any) {
+      // Jika fungsi logout melempar error, tangkap di sini.
+      console.error("Gagal melakukan logout:", e);
+      Alert.alert("Error", `Gagal melakukan logout: ${e.message}`);
     }
   };
 

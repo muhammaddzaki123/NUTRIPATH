@@ -57,13 +57,15 @@ const Profile = () => {
   const initialLinesToShow = 5;
 
   const handleLogout = async () => {
-    const result = await logout();
-    if (result) {
-      Alert.alert("Success", "Logged out successfully");
-      refetch();
-      router.push('/sign-in');
-    } else {
-      Alert.alert("Error", "Failed to logout");
+    try {
+      await logout();
+      
+      Alert.alert("Sukses", "Anda telah berhasil logout.");
+      await refetch(); 
+
+    } catch (e: any) {
+      console.error("Gagal melakukan logout:", e);
+      Alert.alert("Error", `Gagal melakukan logout: ${e.message}`);
     }
   };
 
