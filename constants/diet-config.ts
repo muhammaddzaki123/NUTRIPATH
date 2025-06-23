@@ -29,7 +29,7 @@ interface DietPlans {
 export const DIET_PLANS: DietPlans = {
   Diabetes: {
     1100: {
-      title: "Standar Diet Diabetes 1100 Kalori",
+      title: "Standar Diet Diabetes Melitus 1100 Kalori",
       meals: {
         pagi: [
           { bahan: "Karbohidrat", berat: "50 gram", urt: "1/2 gls", penukar: "1 karbohidrat", exmenu: "Nasi" },
@@ -64,7 +64,7 @@ export const DIET_PLANS: DietPlans = {
       }
     },
     1300: {
-      title: "Standar Diet Diabetes 1300 Kalori",
+      title: "Standar Diet Diabetes Melitus 1300 Kalori",
       meals: {
         pagi: [
           { bahan: "Karbohidrat", berat: "100 gram", urt: "1 gls", penukar: "1 karbohidrat", exmenu: "Nasi" },
@@ -99,7 +99,7 @@ export const DIET_PLANS: DietPlans = {
       }
     },
     1500: {
-      title: "Standar Diet Diabetes 1500 Kalori",
+      title: "Standar Diet Diabetes Melitus 1500 Kalori",
       meals: {
         pagi: [
           { bahan: "Karbohidrat", berat: "100 gram", urt: "1 gls", penukar: "1 Karbohidrat", exmenu: "Nasi" },
@@ -135,7 +135,7 @@ export const DIET_PLANS: DietPlans = {
       }
     },
     1700: {
-      title: "Standar Diet Diabetes 1700 Kalori",
+      title: "Standar Diet Diabetes Melitus 1700 Kalori",
       meals: {
         pagi: [
           { bahan: "Nasi", berat: "100 g", urt: "1 gls", penukar: "1 karbohidrat", exmenu: "Nasi" },
@@ -171,7 +171,7 @@ export const DIET_PLANS: DietPlans = {
       }
     },
     1900: {
-      title: "Standar Diet Diabetes 1900 Kalori",
+      title: "Standar Diet Diabetes Melitus 1900 Kalori",
       meals: {
         pagi: [
           { bahan: "Karbohidrat", berat: "150 gram", urt: "1 1/2 gls", penukar: "1/2 karbohidrat", exmenu: "Nasi" },
@@ -207,7 +207,7 @@ export const DIET_PLANS: DietPlans = {
       }
     },
     2100: {
-      title: "Standar Diet Diabetes 2100 Kalori",
+      title: "Standar Diet Diabetes Melitus 2100 Kalori",
       meals: {
         pagi: [
           { bahan: "Karbohidrat", berat: "100 gram", urt: "1 gelas", penukar: "1 karbohidrat", exmenu: "Nasi" },
@@ -244,7 +244,7 @@ export const DIET_PLANS: DietPlans = {
       }
     },
     2500 : {
-      title : "Standar Diet Diabetes 2500 Kalori",
+      title : "Standar Diet Diabetes Melitus 2500 Kalori",
       meals: {
         pagi: [
           { bahan: "Karbohidrat", berat: "150 gram", urt: "1 1/2 gelas", penukar: "1 1/2 karbohidrat", exmenu: "Nasi" },
