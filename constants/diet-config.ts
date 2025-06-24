@@ -27,7 +27,7 @@ interface DietPlans {
 }
 
 export const DIET_PLANS: DietPlans = {
-  Diabetes: {
+  diabetes_melitus: {
     1100: {
       title: "Standar Diet Diabetes Melitus 1100 Kalori",
       meals: {
@@ -283,7 +283,7 @@ export const DIET_PLANS: DietPlans = {
     },
   },
 
-  Hipertensi: {
+  hipertensi: {
     1100: {
       title: "Standar Diet Hipertensi 1100 Kalori",
       meals: {
@@ -318,7 +318,7 @@ export const DIET_PLANS: DietPlans = {
     }
   },
 
-  Kanker: {
+  kanker: {
     1700: {
       title: "Standar Diet Kanker 1700 Kalori",
       meals: {

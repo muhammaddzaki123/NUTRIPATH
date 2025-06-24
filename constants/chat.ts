@@ -27,7 +27,7 @@ export interface Nutritionist extends Models.Document {
   name: string;        // min: 2, max: 100
   email: string;       // format: email, unique
   userType: 'nutritionist';
-  specialization: 'kanker' | 'hipertensi' | 'diabetes';
+  specialization: 'kanker' | 'hipertensi' | 'diabetes_melitus';
   type: 'Konsultasi Online';
   description?: string; // max: 500
   avatar?: string;     // format: URL

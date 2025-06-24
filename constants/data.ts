@@ -61,8 +61,8 @@ export const diseaseInformation: DiseaseInformation = {
       ]}
     ]
   },
-  diabetes: {
-    title: "Diabetes melitus",
+  diabetes_melitus: {
+    title: "Diabetes Melitus",
     content: [
       { type: 'paragraph', data: 'Menurut Word Health Organization (WHO), diabetes adalah penyakit kronis yang terjadi ketika pankreas tidak memproduksi insulin dalam jumlah cukup atau ketika tubuh tidak dapat menggunakan insulin yang diproduksinya secara efektif. Insulin adalah hormon yang mengatur glukosa darah. Hiperglikemia, yang juga disebut peningkatan glukosa darah atau gula darah, efek umum dari diabetes yang tidak terkontrol adalah seiring waktu akan menyebabkan kerusakan serius pada banyak sistem tubuh, terutama pada saraf dan pembuluh darah.' },
       { type: 'heading', data: 'Gejala Umum' },

@@ -15,8 +15,8 @@ interface User {
   email: string;
   avatar: string;
   userType: 'user' | 'nutritionist';
-  disease?: 'hipertensi' | 'diabetes' | 'kanker';
-  specialization?: 'hipertensi' | 'diabetes' | 'kanker';
+  disease?: 'hipertensi' | 'diabetes_melitus' | 'kanker';
+  specialization?: 'hipertensi' | 'diabetes_melitus' | 'kanker';
   age?: string;
   gender?: string;
 }

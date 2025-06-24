@@ -46,7 +46,7 @@ export type DiseaseRestrictions = {
 };
 
 export const foodRestrictions: DiseaseRestrictions = {
-  diabetes: [
+  diabetes_melitus: [
     { name: "nasi", maxAmount: 2, unit: "sendok nasi" },
     { name: "nasi goreng", maxAmount: 1, unit: "sendok makan" },
     { name: "roti putih", maxAmount: 1, unit: "buah" },

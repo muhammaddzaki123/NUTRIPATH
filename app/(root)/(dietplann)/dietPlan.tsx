@@ -23,10 +23,12 @@ const DietPlan = () => {
     { label: 'Super aktif (olahraga sangat keras/pekerjaan fisik & olahraga dua kali sehari)', value: 1.9 },
   ];
 
+  // PERUBAHAN DI SINI: Mengubah array string menjadi array objek { label, value }
   const diseasesOptions = [
-    'Hipertensi',
-    'Diabetes',
-    'Kanker'
+    { label: 'Pilih Penyakit', value: '' },
+    { label: 'Diabetes Melitus', value: 'diabetes_melitus' },
+    { label: 'Hipertensi', value: 'hipertensi' },
+    { label: 'Kanker', value: 'kanker' }
   ];
 
   const calculateBMR = () => {
@@ -152,6 +154,7 @@ const DietPlan = () => {
           <View className="mb-4">
             <Text className="text-white mb-2">Penyakit yang di Derita :</Text>
             <View className="bg-white rounded-lg">
+              {/* PERUBAHAN DI SINI: Menggunakan data baru untuk merender Picker.Item */}
               <Picker
                 selectedValue={disease}
                 onValueChange={setDisease}
@@ -159,9 +162,8 @@ const DietPlan = () => {
                 style={{ color: 'black' }}
                 dropdownIconColor="black"
               >
-                <Picker.Item label="Pilih Penyakit" value="" style={{ color: 'black' }} />
                 {diseasesOptions.map((d, index) => (
-                  <Picker.Item key={index} label={d} value={d} style={{ color: 'black' }} />
+                  <Picker.Item key={index} label={d.label} value={d.value} style={{ color: 'black' }} />
                 ))}
               </Picker>
             </View>
@@ -196,7 +198,7 @@ const DietPlan = () => {
                   router.push({
                     pathname: "/diet-recommendations",
                     params: {
-                      disease: disease,
+                      disease: disease, // disease sekarang bernilai 'diabetes_melitus'
                       calories: tee.toString()
                     }
                   });
