@@ -6,18 +6,15 @@ import { useState } from 'react';
 import { SafeAreaView, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { foodRestrictions, urtOptions } from '../../../constants/food-restrictions';
 
-// Update tipe data untuk menyertakan waktu makan
 type FoodInput = {
   name: string;
   amount: string;
   unit: string;
 };
 
-// Types for meal data
 type MealType = 'breakfast' | 'lunch' | 'dinner';
 type MealLabel = 'Sarapan' | 'Makan Siang' | 'Makan Malam';
 
-// Types for food data
 interface EnhancedFoodInput extends FoodInput {
   mealType: MealType;
   mealLabel: MealLabel;
@@ -34,11 +31,21 @@ interface MealData {
   others: FoodInput[];
   snacks: FoodInput[];
   mealTime: Date | null;
-  snackTime: Date | null; // Penambahan untuk waktu selingan
+  snackTime: Date | null;
 }
 
 type MealsState = {
   [key in MealType]: MealData;
+};
+
+// Aturan batas waktu MAKSIMAL untuk makan
+const mealTimeRules = {
+  breakfast: { hour: 7, minute: 0, label: "Makan Pagi" },
+  breakfastSnack: { hour: 10, minute: 0, label: "Selingan Pagi" },
+  lunch: { hour: 13, minute: 0, label: "Makan Siang" },
+  lunchSnack: { hour: 16, minute: 0, label: "Selingan Siang" },
+  dinner: { hour: 19, minute: 0, label: "Makan Malam" },
+  dinnerSnack: { hour: 20, minute: 0, label: "Selingan Malam" },
 };
 
 const FoodInputRow = ({
@@ -52,7 +59,6 @@ const FoodInputRow = ({
 }) => (
   <View className="mb-4">
     <View className="flex-row items-center">
-      {/* Nama Makanan */}
       <View className="flex-1">
         <TextInput
           className="bg-white rounded-2xl px-4 h-12 text-base shadow-sm text-black"
@@ -63,8 +69,6 @@ const FoodInputRow = ({
           placeholderTextColor="#9CA3AF"
         />
       </View>
-
-      {/* Jumlah (Dipersempit) */}
       <View className="w-16 ml-2">
         <TextInput
           className="bg-white rounded-2xl px-4 h-12 text-base text-center shadow-sm text-black"
@@ -76,8 +80,6 @@ const FoodInputRow = ({
           keyboardType="numeric"
         />
       </View>
-
-      {/* URT Picker */}
       <View className="w-[120px] ml-2">
         <View 
           className="bg-white rounded-2xl shadow-sm overflow-hidden h-12 flex justify-center" 
@@ -106,7 +108,6 @@ const FoodInputRow = ({
   </View>
 );
 
-// Komponen TimePicker baru
 const MealTimePicker = ({
   mealTime,
   onTimeChange,
@@ -121,7 +122,6 @@ const MealTimePicker = ({
   const handleTimeChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
     setShowPicker(false);
     if (selectedDate) {
-      // Set only the time part, keep today's date
       const now = new Date();
       selectedDate.setFullYear(now.getFullYear());
       selectedDate.setMonth(now.getMonth());
@@ -161,8 +161,8 @@ const MealTimePicker = ({
           is24Hour={true}
           display="default"
           onChange={handleTimeChange}
-          minimumDate={new Date(0, 0, 0, 0, 0)} // Allow any time
-          maximumDate={new Date(0, 0, 0, 23, 59)} // Allow any time
+          minimumDate={new Date(0, 0, 0, 0, 0)}
+          maximumDate={new Date(0, 0, 0, 23, 59)}
         />
       )}
     </View>
@@ -244,14 +244,13 @@ export default function FoodRecallScreen() {
       const categories: Array<keyof Omit<MealData, 'mealTime' | 'snackTime'>> = ['carbs', 'others', 'snacks'];
 
       const restrictions = foodRestrictions[disease] || [];
-      // First, associate each food with its meal type and time
       const foodsWithMealInfo: EnhancedFoodInput[] = mealTypes.flatMap(mealType => {
         const meal = meals[mealType];
         const mealLabel = mealType === 'breakfast' ? 'Sarapan' :
                          mealType === 'lunch' ? 'Makan Siang' : 'Makan Malam';
         return categories.flatMap(category => 
           meal[category]
-            .filter(food => food.name.trim() !== '') // Only include foods with names
+            .filter(food => food.name.trim() !== '')
             .map(food => ({
               ...food,
               mealType,
@@ -265,7 +264,6 @@ export default function FoodRecallScreen() {
         );
       });
 
-      // Then filter and transform warning foods
       const warningFoods: WarningFoodInput[] = foodsWithMealInfo
         .map(food => {
           const restriction = restrictions.find((r: { name: string; maxAmount: number; unit: string }) => 
@@ -282,47 +280,53 @@ export default function FoodRecallScreen() {
         })
         .filter((item): item is NonNullable<typeof item> => item !== null);
 
+      // --- PERUBAHAN UTAMA: Logika pengecekan batas waktu ---
+      const timeWarnings: string[] = [];
+      Object.entries(meals).forEach(([mealKey, mealData]) => {
+        const type = mealKey as MealType;
+        
+        // Buat objek Date untuk aturan waktu
+        const getRuleTime = (rule: { hour: number; minute: number }) => {
+            const ruleDate = new Date();
+            ruleDate.setHours(rule.hour, rule.minute, 0, 0);
+            return ruleDate;
+        };
+
+        // Cek waktu makan utama
+        if (mealData.mealTime) {
+            const rule = mealTimeRules[type];
+            if (mealData.mealTime > getRuleTime(rule)) {
+                timeWarnings.push(`Waktu ${rule.label} melebihi batas anjuran (maksimal jam ${String(rule.hour).padStart(2, '0')}:${String(rule.minute).padStart(2, '0')}).`);
+            }
+        }
+
+        // Cek waktu selingan
+        if(mealData.snackTime) {
+            const snackRuleKey = `${type}Snack` as keyof typeof mealTimeRules;
+            const rule = mealTimeRules[snackRuleKey];
+            if (rule && mealData.snackTime > getRuleTime(rule)) {
+                timeWarnings.push(`Waktu ${rule.label} melebihi batas anjuran (maksimal jam ${String(rule.hour).padStart(2, '0')}:${String(rule.minute).padStart(2, '0')}).`);
+            }
+        }
+      });
+
       const { name, age, gender } = params;
 
       const mealsWithTime = {
         breakfast: {
           ...meals.breakfast,
-          mealTime: meals.breakfast.mealTime?.toLocaleTimeString('id-ID', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false
-          }) || null,
-          snackTime: meals.breakfast.snackTime?.toLocaleTimeString('id-ID', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false
-          }) || null,
+          mealTime: meals.breakfast.mealTime?.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false }) || null,
+          snackTime: meals.breakfast.snackTime?.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false }) || null,
         },
         lunch: {
           ...meals.lunch,
-          mealTime: meals.lunch.mealTime?.toLocaleTimeString('id-ID', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false
-          }) || null,
-          snackTime: meals.lunch.snackTime?.toLocaleTimeString('id-ID', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false
-          }) || null,
+          mealTime: meals.lunch.mealTime?.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false }) || null,
+          snackTime: meals.lunch.snackTime?.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false }) || null,
         },
         dinner: {
           ...meals.dinner,
-          mealTime: meals.dinner.mealTime?.toLocaleTimeString('id-ID', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false
-          }) || null,
-          snackTime: meals.dinner.snackTime?.toLocaleTimeString('id-ID', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false
-          }) || null,
+          mealTime: meals.dinner.mealTime?.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false }) || null,
+          snackTime: meals.dinner.snackTime?.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false }) || null,
         }
       };
 
@@ -330,6 +334,7 @@ export default function FoodRecallScreen() {
         pathname: '/warning',
         params: {
           warningFoods: JSON.stringify(warningFoods),
+          timeWarnings: JSON.stringify(timeWarnings),
           name, age, gender, disease,
           breakfast: JSON.stringify(mealsWithTime.breakfast),
           lunch: JSON.stringify(mealsWithTime.lunch),
@@ -338,7 +343,7 @@ export default function FoodRecallScreen() {
       });
     }
   };
-
+  
   const handleBack = () => {
     if (mealType === 'dinner') {
       setMealType('lunch');
@@ -364,7 +369,6 @@ export default function FoodRecallScreen() {
   return (
     <SafeAreaView className='bg-primary-400 h-full p-4'>
       <View className="flex-1 bg-primary-500 rounded-xl mt-5 mb-10" >
-        {/* Header */}
         <View className="flex-row items-center pt-5 border-b border-white pb-2 mb-4">
           <TouchableOpacity onPress={handleBack} className="p-2">
             <Ionicons name="arrow-back" size={24} color="white" />
@@ -377,7 +381,6 @@ export default function FoodRecallScreen() {
 
         <ScrollView className="flex-1 px-6 pb-5 mb-5" showsVerticalScrollIndicator={false}>
           <View className="space-y-6">
-            {/* Header Jenis Makanan */}
             <View className="bg-white/10 rounded-2xl mb-4 py-2">
               <Text className="text-white text-2xl font-rubik-bold text-center">
                 {mealType === 'breakfast' ? 'Makan Pagi' :
@@ -385,7 +388,6 @@ export default function FoodRecallScreen() {
               </Text>
             </View>
 
-            {/* Time Picker */}
             <MealTimePicker
               mealTime={currentMeal.mealTime}
               onTimeChange={(time) => updateMealTime(mealType, time)}
@@ -394,7 +396,6 @@ export default function FoodRecallScreen() {
             />
 
             <View className="space-y-6">
-              {/* Bagian Karbohidrat */}
               <View className="bg-white/10 rounded-2xl p-4 mb-2">
                 <Text className="text-white text-lg font-rubik-semibold mb-4">Nasi/Karbohidrat</Text>
                 {currentMeal.carbs.map((food, index) => (
@@ -408,7 +409,6 @@ export default function FoodRecallScreen() {
                 <AddButton onPress={() => addRow(mealType, 'carbs')} label="Tambah Karbohidrat" />
               </View>
 
-              {/* Bagian Lauk Pauk */}
               <View className="bg-white/10 rounded-2xl p-4 mb-2">
                 <Text className="text-white text-lg font-rubik-semibold mb-4">Lauk Pauk</Text>
                 {currentMeal.others.map((food, index) => (
@@ -422,7 +422,6 @@ export default function FoodRecallScreen() {
                 <AddButton onPress={() => addRow(mealType, 'others')} label="Tambah Lauk Pauk" />
               </View>
 
-              {/* Bagian Makanan Selingan */}
               <View className="bg-white/10 rounded-2xl p-4">
                 <Text className="text-white text-lg font-rubik-semibold mb-4">Makanan Selingan</Text>
                 <MealTimePicker
@@ -446,7 +445,6 @@ export default function FoodRecallScreen() {
             </View>
           </View>
 
-          {/* Tombol Aksi Utama */}
           <TouchableOpacity
             className="bg-white rounded-full py-4 px-6 my-5 items-center shadow-lg"
             onPress={handleNext}
