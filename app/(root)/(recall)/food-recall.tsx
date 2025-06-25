@@ -34,6 +34,7 @@ interface MealData {
   others: FoodInput[];
   snacks: FoodInput[];
   mealTime: Date | null;
+  snackTime: Date | null; // Penambahan untuk waktu selingan
 }
 
 type MealsState = {
@@ -178,7 +179,8 @@ export default function FoodRecallScreen() {
     carbs: [{ name: '', amount: '', unit: '' }],
     others: [{ name: '', amount: '', unit: '' }],
     snacks: [{ name: '', amount: '', unit: '' }],
-    mealTime: null
+    mealTime: null,
+    snackTime: null,
   };
 
   const [meals, setMeals] = useState<MealsState>({
@@ -187,7 +189,7 @@ export default function FoodRecallScreen() {
     dinner: JSON.parse(JSON.stringify(initialMealState))
   });
 
-  const updateFood = (type: MealType, category: keyof Omit<MealData, 'mealTime'>, index: number, data: FoodInput) => {
+  const updateFood = (type: MealType, category: keyof Omit<MealData, 'mealTime' | 'snackTime'>, index: number, data: FoodInput) => {
     setMeals(prev => {
       const updatedCategory = [...prev[type][category]];
       updatedCategory[index] = data;
@@ -212,7 +214,17 @@ export default function FoodRecallScreen() {
     }));
   };
   
-  const addRow = (type: MealType, category: keyof Omit<MealData, 'mealTime'>) => {
+  const updateSnackTime = (type: MealType, time: Date | null) => {
+    setMeals(prev => ({
+      ...prev,
+      [type]: {
+        ...prev[type],
+        snackTime: time,
+      }
+    }));
+  };
+
+  const addRow = (type: MealType, category: keyof Omit<MealData, 'mealTime' | 'snackTime'>) => {
     setMeals(prev => ({
       ...prev,
       [type]: {
@@ -229,7 +241,7 @@ export default function FoodRecallScreen() {
       setMealType('dinner');
     } else {
       const mealTypes: MealType[] = ['breakfast', 'lunch', 'dinner'];
-      const categories: Array<keyof Omit<MealData, 'mealTime'>> = ['carbs', 'others', 'snacks'];
+      const categories: Array<keyof Omit<MealData, 'mealTime' | 'snackTime'>> = ['carbs', 'others', 'snacks'];
 
       const restrictions = foodRestrictions[disease] || [];
       // First, associate each food with its meal type and time
@@ -279,7 +291,12 @@ export default function FoodRecallScreen() {
             hour: '2-digit',
             minute: '2-digit',
             hour12: false
-          }) || null
+          }) || null,
+          snackTime: meals.breakfast.snackTime?.toLocaleTimeString('id-ID', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+          }) || null,
         },
         lunch: {
           ...meals.lunch,
@@ -287,7 +304,12 @@ export default function FoodRecallScreen() {
             hour: '2-digit',
             minute: '2-digit',
             hour12: false
-          }) || null
+          }) || null,
+          snackTime: meals.lunch.snackTime?.toLocaleTimeString('id-ID', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+          }) || null,
         },
         dinner: {
           ...meals.dinner,
@@ -295,7 +317,12 @@ export default function FoodRecallScreen() {
             hour: '2-digit',
             minute: '2-digit',
             hour12: false
-          }) || null
+          }) || null,
+          snackTime: meals.dinner.snackTime?.toLocaleTimeString('id-ID', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+          }) || null,
         }
       };
 
@@ -398,6 +425,14 @@ export default function FoodRecallScreen() {
               {/* Bagian Makanan Selingan */}
               <View className="bg-white/10 rounded-2xl p-4">
                 <Text className="text-white text-lg font-rubik-semibold mb-4">Makanan Selingan</Text>
+                <MealTimePicker
+                  mealTime={currentMeal.snackTime}
+                  onTimeChange={(time) => updateSnackTime(mealType, time)}
+                  mealLabel={`Selingan ${
+                    mealType === 'breakfast' ? 'Pagi' :
+                    mealType === 'lunch' ? 'Siang' : 'Malam'
+                  }`}
+                />
                 {currentMeal.snacks.map((food, index) => (
                   <FoodInputRow
                     key={`snack-${index}`}

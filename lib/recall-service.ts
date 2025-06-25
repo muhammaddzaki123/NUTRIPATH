@@ -13,6 +13,7 @@ export interface MealData {
   others: FoodInput[];
   snacks: FoodInput[];
   mealTime?: string | null;
+  snackTime?: string | null; // Waktu untuk selingan
 }
 
 export interface RecallData {
@@ -59,9 +60,6 @@ interface RecallDocument {
 // Save food recall data to database with enhanced notification
 export const saveFoodRecall = async (data: Omit<RecallData, 'createdAt'>) => {
   try {
-    console.log('Saving food recall data:', data);
-    
-    // Stringify objects before saving
     const documentData = {
       ...data,
       breakfast: JSON.stringify(data.breakfast),
@@ -79,7 +77,6 @@ export const saveFoodRecall = async (data: Omit<RecallData, 'createdAt'>) => {
       documentData
     );
 
-    // Create notification for the user
     await createRecallNotification(
       data.userId,
       response.$id,
@@ -89,7 +86,6 @@ export const saveFoodRecall = async (data: Omit<RecallData, 'createdAt'>) => {
       }
     );
 
-    // If user has a nutritionist assigned, notify them as well
     if (data.nutritionistId) {
       await createRecallNotification(
         data.userId,
@@ -102,7 +98,6 @@ export const saveFoodRecall = async (data: Omit<RecallData, 'createdAt'>) => {
       );
     }
 
-    console.log('Food recall data saved successfully:', response);
     return response;
   } catch (error) {
     console.error('Error saving food recall data:', error);
@@ -119,38 +114,36 @@ export const shareFoodRecallInChat = async (
   userName: string
 ) => {
   try {
-    // Get the food recall data
     const recall = await getFoodRecallById(recallId);
     
-    // Format the recall data as a message
-const formatMeal = (meal: MealData) => {
-      const foods = [];
-      
-      // Add meal time if available
-      if (meal.mealTime) {
-        foods.push(`⏰ Waktu: ${meal.mealTime}`);
+    // FUNGSI YANG DIPERBAIKI
+    const formatMeal = (meal: MealData) => {
+      const parts: string[] = [];
+      const mainFoods = [
+        ...meal.carbs.filter(f => f.name).map(f => `  🍚 Karbohidrat: ${f.name} (${f.amount} ${f.unit})`),
+        ...meal.others.filter(f => f.name).map(f => `  🍖 Lauk: ${f.name} (${f.amount} ${f.unit})`),
+      ];
+
+      if (mainFoods.length > 0) {
+        if (meal.mealTime) {
+          parts.push(`⏰ Waktu Makan Utama: ${meal.mealTime}`);
+        }
+        parts.push(...mainFoods);
       }
 
-      // Add carbs
-      // Process each type of food
-      const carbFoods = meal.carbs.filter(f => f.name).map(f =>
-        `🍚 Karbohidrat: ${f.name} (${f.amount} ${f.unit})`
-      );
-      
-      const otherFoods = meal.others.filter(f => f.name).map(f => 
-        `🍖 Lauk: ${f.name} (${f.amount} ${f.unit})`
-      );
+      const snackFoods = meal.snacks.filter(f => f.name).map(f => `  🍎 Selingan: ${f.name} (${f.amount} ${f.unit})`);
 
-      const snackFoods = meal.snacks.filter(f => f.name).map(f => 
-        `🍎 Selingan: ${f.name} (${f.amount} ${f.unit})`
-      );
+      if (snackFoods.length > 0) {
+        if (parts.length > 0) {
+          parts.push(''); // Tambah baris kosong sebagai pemisah
+        }
+        if (meal.snackTime) {
+          parts.push(`🕒 Waktu Selingan: ${meal.snackTime}`);
+        }
+        parts.push(...snackFoods);
+      }
       
-      return [
-        ...foods,
-        ...carbFoods,
-        ...otherFoods,
-        ...snackFoods
-      ].join('\n');
+      return parts.join('\n');
     };
 
     const recallSummary = `
@@ -175,7 +168,6 @@ ${recall.warningFoods.map((food: FoodInput) =>
 ).join('\n')}` : ''}
     `.trim();
 
-    // Send the message to chat
     const message = await databases.createDocument(
       config.databaseId!,
       config.chatMessagesCollectionId!,
@@ -193,7 +185,6 @@ ${recall.warningFoods.map((food: FoodInput) =>
       }
     );
 
-    // Create notification for nutritionist about shared recall
     await createChatNotification(
       userId,
       nutritionistId,
@@ -204,7 +195,6 @@ ${recall.warningFoods.map((food: FoodInput) =>
       true
     );
 
-    // Update recall document status
     await databases.updateDocument(
       config.databaseId!,
       config.foodRecallCollectionId!,
@@ -218,7 +208,6 @@ ${recall.warningFoods.map((food: FoodInput) =>
       }
     );
 
-    // Create recall notification for both user and nutritionist
     await createRecallNotification(
       userId,
       recallId,
@@ -248,7 +237,6 @@ export const getUserFoodRecalls = async (userId: string) => {
       ]
     );
     
-    // Parse stringified data and check for recalls needing review
     const recalls = response.documents.map((doc: RecallDocument) => {
       const recall = {
         ...doc,
@@ -258,11 +246,9 @@ export const getUserFoodRecalls = async (userId: string) => {
         warningFoods: JSON.parse(doc.warningFoods)
       };
 
-      // If recall needs review and hasn't been notified recently
       if (doc.status === 'needs_update' && doc.nextReviewDate) {
         const nextReview = new Date(doc.nextReviewDate);
         if (nextReview <= new Date()) {
-          // Create notification for review reminder
           createRecallNotification(
             userId,
             doc.$id,
@@ -294,7 +280,6 @@ export const getFoodRecallById = async (recallId: string) => {
       recallId
     );
     
-    // Parse stringified data
     return {
       ...response,
       breakfast: JSON.parse(response.breakfast),
@@ -329,7 +314,6 @@ export const updateRecallStatus = async (
       }
     );
 
-    // Create notification for the user about the review
     await createRecallNotification(
       recall.userId,
       recallId,
