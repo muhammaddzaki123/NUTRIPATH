@@ -1,6 +1,8 @@
 import { getNutritionists } from '@/lib/appwrite';
 import { useGlobalContext } from '@/lib/global-provider';
 import { saveFoodRecall, shareFoodRecallInChat } from '@/lib/recall-service';
+// PERUBAHAN 1: Impor fungsi formatDiseaseName
+import { formatDiseaseName } from '@/utils/format';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Alert, SafeAreaView, ScrollView, Text, TouchableOpacity, View } from 'react-native';
@@ -38,18 +40,18 @@ export default function WarningScreen() {
         return;
       }
 
-      // --- PERUBAHAN UTAMA: Tambahkan timeWarnings ke data yang akan disimpan ---
+      // --- Data yang akan disimpan tetap menggunakan nilai mentah ---
       const recallData = {
         userId: user.$id,
         name: params.name as string,
         age: params.age as string,
         gender: params.gender as string,
-        disease: params.disease as string,
+        disease: params.disease as string, // 'diabetes_melitus'
         breakfast: JSON.parse(params.breakfast as string),
         lunch: JSON.parse(params.lunch as string),
         dinner: JSON.parse(params.dinner as string),
         warningFoods,
-        timeWarnings, // <-- TAMBAHKAN INI
+        timeWarnings,
         status: 'pending' as const
       };
 
@@ -63,9 +65,8 @@ export default function WarningScreen() {
       if (matchingNutritionist) {
         const chatId = `${user.$id}-${matchingNutritionist.$id}`;
         
-        // Fungsi ini sekarang akan memiliki akses ke data recall yang lengkap (termasuk timeWarnings)
         await shareFoodRecallInChat(
-          savedRecall.$id, // Menggunakan ID dari data yang baru disimpan
+          savedRecall.$id,
           chatId,
           user.$id,
           matchingNutritionist.$id,
@@ -112,7 +113,8 @@ export default function WarningScreen() {
                   Jenis Kelamin: {params.gender}
                 </Text>
                 <Text className="text-white text-lg font-rubik">
-                  Riwayat Penyakit: {params.disease}
+                  {/* PERUBAHAN 2: Terapkan fungsi format di sini */}
+                  Riwayat Penyakit: {formatDiseaseName(params.disease as string)}
                 </Text>
               </View>
             </View>

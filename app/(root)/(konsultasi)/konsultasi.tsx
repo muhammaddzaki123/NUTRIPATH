@@ -1,6 +1,8 @@
 import { useChat } from '@/components/ChatContext';
 import { Nutritionist, User } from '@/constants/chat';
 import { useGlobalContext } from '@/lib/global-provider';
+// PERUBAHAN 1: Impor fungsi formatDiseaseName
+import { formatDiseaseName } from '@/utils/format'; 
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -18,7 +20,6 @@ const KonsultasiScreen = () => {
   if (!user) {
     return (
       <SafeAreaView className="flex-1 bg-primary-500 items-center justify-center">
-        {/* Atur status bar untuk layar ini */}
         <StatusBar backgroundColor="#0BBEBB" style="light" />
         <Text className="text-white text-lg mb-4 text-center px-8">
           Anda harus login untuk mengakses fitur konsultasi.
@@ -221,8 +222,9 @@ const KonsultasiScreen = () => {
                   </View>
                   
                   <View className="px-4 pb-3 pt-2 bg-slate-50 border-t border-slate-100">
+                     {/* PERUBAHAN 2: Terapkan fungsi format di sini */}
                      <Text className="text-sm font-rubik-medium text-gray-700">
-                        Spesialisasi: <Text className="font-rubik">{nutritionist.specialization}</Text>
+                        Spesialisasi: <Text className="font-rubik">{formatDiseaseName(nutritionist.specialization)}</Text>
                       </Text>
                       <Text className="text-sm font-rubik-medium text-gray-700 mt-1">
                         Tipe: <Text className="font-rubik">{nutritionist.type}</Text>

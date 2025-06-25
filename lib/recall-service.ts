@@ -1,4 +1,5 @@
 import { Query } from 'react-native-appwrite';
+import { formatDiseaseName } from '../utils/format';
 import { config, databases } from './appwrite';
 import { createChatNotification, createRecallNotification } from './notification-service';
 
@@ -6,6 +7,8 @@ export interface FoodInput {
   name: string;
   amount: string;
   unit: string;
+  mealLabel?: string;
+  mealTime?: string;
 }
 
 export interface MealData {
@@ -13,10 +16,8 @@ export interface MealData {
   others: FoodInput[];
   snacks: FoodInput[];
   mealTime?: string | null;
-  snackTime?: string | null;
 }
 
-// --- PERUBAHAN 1: Pastikan timeWarnings ada di tipe data ---
 export interface RecallData {
   userId: string;
   name: string;
@@ -27,7 +28,7 @@ export interface RecallData {
   lunch: MealData;
   dinner: MealData;
   warningFoods: FoodInput[];
-  timeWarnings?: string[]; // Jadikan opsional untuk keamanan
+  timeWarnings: string[];
   createdAt?: string;
   lastReviewDate?: string;
   nextReviewDate?: string;
@@ -51,7 +52,7 @@ interface RecallDocument {
   lunch: string;
   dinner: string;
   warningFoods: string;
-  timeWarnings?: string; // Stored as a JSON string
+  timeWarnings: string;
   createdAt: string;
   lastReviewDate?: string;
   nextReviewDate?: string;
@@ -68,7 +69,6 @@ export const saveFoodRecall = async (data: Omit<RecallData, 'createdAt'>) => {
       lunch: JSON.stringify(data.lunch),
       dinner: JSON.stringify(data.dinner),
       warningFoods: JSON.stringify(data.warningFoods),
-      // --- PERUBAHAN 2: Pastikan timeWarnings ada sebelum di-stringify ---
       timeWarnings: JSON.stringify(data.timeWarnings || []),
       createdAt: new Date().toISOString(),
       status: 'pending' as const
@@ -81,7 +81,6 @@ export const saveFoodRecall = async (data: Omit<RecallData, 'createdAt'>) => {
       documentData
     );
 
-    // Notifikasi tetap sama
     await createRecallNotification(
       data.userId,
       response.$id,
@@ -102,6 +101,7 @@ export const saveFoodRecall = async (data: Omit<RecallData, 'createdAt'>) => {
   }
 };
 
+
 export const shareFoodRecallInChat = async (
   recallId: string,
   chatId: string,
@@ -113,51 +113,41 @@ export const shareFoodRecallInChat = async (
     const recall = await getFoodRecallById(recallId);
     
     const formatMeal = (meal: MealData) => {
-      const parts: string[] = [];
-      const mainFoods = [
-        ...meal.carbs.filter(f => f.name).map(f => `  🍚 Karbohidrat: ${f.name} (${f.amount} ${f.unit})`),
-        ...meal.others.filter(f => f.name).map(f => `  🍖 Lauk: ${f.name} (${f.amount} ${f.unit})`),
-      ];
-      if (mainFoods.length > 0) {
-        if (meal.mealTime) parts.push(`⏰ Waktu Makan Utama: ${meal.mealTime}`);
-        parts.push(...mainFoods);
-      }
-      const snackFoods = meal.snacks.filter(f => f.name).map(f => `  🍎 Selingan: ${f.name} (${f.amount} ${f.unit})`);
-      if (snackFoods.length > 0) {
-        if (parts.length > 0) parts.push('');
-        if (meal.snackTime) parts.push(`🕒 Waktu Selingan: ${meal.snackTime}`);
-        parts.push(...snackFoods);
-      }
-      return parts.join('\n');
+      const foods: string[] = [];
+      if (meal.carbs.some(f => f.name)) foods.push(...meal.carbs.filter(f => f.name).map(f => `  • Karbo: ${f.name} (${f.amount} ${f.unit})`));
+      if (meal.others.some(f => f.name)) foods.push(...meal.others.filter(f => f.name).map(f => `  • Lauk: ${f.name} (${f.amount} ${f.unit})`));
+      if (meal.snacks.some(f => f.name)) foods.push(...meal.snacks.filter(f => f.name).map(f => `  • Selingan: ${f.name} (${f.amount} ${f.unit})`));
+      return foods.length > 0 ? foods.join('\n') : "  (Tidak ada data)";
     };
 
-    // --- PERUBAHAN 3: Format pesan chat untuk menyertakan timeWarnings ---
-    const recallSummary = `
-📋 Food Recall Data:
-👤 Nama: ${recall.name}
-📅 Usia: ${recall.age}
-⚧ Jenis Kelamin: ${recall.gender}
-🏥 Riwayat Penyakit: ${recall.disease}
+    const warningSections = [];
+    if (recall.timeWarnings && recall.timeWarnings.length > 0) {
+        // PERBAIKAN 1: Tambahkan tipe data 'string' untuk parameter 'w'
+        warningSections.push(`*Peringatan Waktu Makan:*\n${recall.timeWarnings.map((w: string) => `  - ${w}`).join('\n')}`);
+    }
+    if (recall.warningFoods && recall.warningFoods.length > 0) {
+        // PERBAIKAN 2: Tambahkan tipe data 'FoodInput' untuk parameter 'food'
+        warningSections.push(`*Asupan Melebihi Batas:*\n${recall.warningFoods.map((food: FoodInput) => `  - ${food.name} (${food.mealLabel}) sejumlah ${food.amount} ${food.unit}`).join('\n')}`);
+    }
 
-🌅 === MAKAN PAGI ===
+    const recallSummary = `
+📋 **Hasil Food Recall Pasien**
+*Nama:* ${recall.name}
+*Usia:* ${recall.age} tahun
+*Penyakit:* ${formatDiseaseName(recall.disease)}
+---
+🌅 *Makan Pagi (${recall.breakfast.mealTime || 'N/A'})*
 ${formatMeal(recall.breakfast)}
 
-☀️ === MAKAN SIANG ===
+☀️ *Makan Siang (${recall.lunch.mealTime || 'N/A'})*
 ${formatMeal(recall.lunch)}
 
-🌙 === MAKAN MALAM ===
+🌙 *Makan Malam (${recall.dinner.mealTime || 'N/A'})*
 ${formatMeal(recall.dinner)}
-
-${recall.warningFoods.length > 0 ? `\n⚠️ PERINGATAN - Makanan Melebihi Batas:
-${recall.warningFoods.map((food: FoodInput) => 
-  `❗ ${food.name}: ${food.amount} ${food.unit}`
-).join('\n')}` : ''}
-
-${(recall.timeWarnings && recall.timeWarnings.length > 0) ? `\n\n🕒 PERINGATAN - Waktu Makan Tidak Sesuai:
-${recall.timeWarnings.map((warning: string) => 
-  `- ${warning}`
-).join('\n')}` : ''}
-    `.trim();
+---
+⚠️ **CATATAN PERINGATAN**
+${warningSections.length > 0 ? warningSections.join('\n\n') : 'Tidak ada peringatan. Asupan pasien terpantau baik.'}
+`.trim().replace(/\n\n+/g, '\n\n');
 
     const message = await databases.createDocument(
       config.databaseId!,
@@ -176,7 +166,6 @@ ${recall.timeWarnings.map((warning: string) =>
       }
     );
 
-    // Sisa fungsi notifikasi tidak perlu diubah
     await createChatNotification(
       userId,
       nutritionistId,
@@ -186,26 +175,28 @@ ${recall.timeWarnings.map((warning: string) =>
       true,
       true
     );
+
     await databases.updateDocument(
       config.databaseId!,
       config.foodRecallCollectionId!,
       recallId,
       { sharedInChat: true, nutritionistId, status: 'pending', lastReviewDate: null, nextReviewDate: null }
     );
+
     await createRecallNotification(
       userId,
       recallId,
       { name: recall.name, disease: recall.disease },
       nutritionistId
     );
+
     return message;
   } catch (error) {
-    console.error('Error sharing food recall in chat:', error);
+    console.error('Gagal membagikan food recall di chat:', error);
     throw error;
   }
 };
 
-// --- PERUBAHAN 4: Pastikan parse timeWarnings di fungsi get ---
 export const getFoodRecallById = async (recallId: string) => {
   try {
     const response = await databases.getDocument<RecallDocument>(
@@ -220,7 +211,6 @@ export const getFoodRecallById = async (recallId: string) => {
       lunch: JSON.parse(response.lunch),
       dinner: JSON.parse(response.dinner),
       warningFoods: JSON.parse(response.warningFoods),
-      // Tambahkan parse untuk timeWarnings
       timeWarnings: response.timeWarnings ? JSON.parse(response.timeWarnings) : []
     };
   } catch (error) {
@@ -229,7 +219,6 @@ export const getFoodRecallById = async (recallId: string) => {
   }
 };
 
-// --- PERUBAHAN 5: Pastikan parse timeWarnings di fungsi get list ---
 export const getUserFoodRecalls = async (userId: string) => {
   try {
     const response = await databases.listDocuments<RecallDocument>(
@@ -238,7 +227,7 @@ export const getUserFoodRecalls = async (userId: string) => {
       [ Query.equal('userId', userId), Query.orderDesc('createdAt') ]
     );
     
-    return response.documents.map((doc: RecallDocument) => ({
+    const recalls = response.documents.map((doc: RecallDocument) => ({
       ...doc,
       breakfast: JSON.parse(doc.breakfast),
       lunch: JSON.parse(doc.lunch),
@@ -246,13 +235,28 @@ export const getUserFoodRecalls = async (userId: string) => {
       warningFoods: JSON.parse(doc.warningFoods),
       timeWarnings: doc.timeWarnings ? JSON.parse(doc.timeWarnings) : []
     }));
+
+    recalls.forEach(recall => {
+        if (recall.status === 'needs_update' && recall.nextReviewDate) {
+            const nextReview = new Date(recall.nextReviewDate);
+            if (nextReview <= new Date()) {
+              createRecallNotification(
+                userId,
+                recall.$id,
+                { name: recall.name, disease: recall.disease },
+                recall.nutritionistId
+              ).catch(console.error);
+            }
+        }
+    });
+
+    return recalls;
   } catch (error) {
     console.error('Error getting user food recalls:', error);
     throw error;
   }
 };
 
-// Fungsi updateRecallStatus tidak perlu diubah
 export const updateRecallStatus = async (
   recallId: string,
   status: 'reviewed' | 'needs_update',
