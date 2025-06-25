@@ -1,34 +1,63 @@
-import { ContentBlock, diseaseInformation } from '@/constants/data';
+import { getDiseaseInformation } from '@/lib/appwrite';
 import { useGlobalContext } from '@/lib/global-provider';
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   SafeAreaView,
   ScrollView,
   Text,
   View
 } from "react-native";
 
+// Definisikan tipe untuk data yang akan diterima dari Appwrite
+interface ContentBlock {
+  type: 'heading' | 'paragraph' | 'list' | 'table';
+  data: any;
+}
+
+interface DiseaseInfo {
+  title: string;
+  content: ContentBlock[];
+}
+
 const Info = () => {
   const { user } = useGlobalContext();
+  const [diseaseInfo, setDiseaseInfo] = useState<DiseaseInfo | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const getDiseaseInfo = () => {
-    if (!user) {
-      return null;
-    }
-    
-    // Menggunakan spesialisasi untuk ahli gizi dan penyakit untuk user
-    const diseaseKey = (user.userType === 'user' ? user.disease : user.specialization)?.toLowerCase();
-    
-    if (diseaseKey && diseaseKey in diseaseInformation) {
-      return diseaseInformation[diseaseKey];
-    }
-    
-    return null;
-  };
+  useEffect(() => {
+    // Fungsi untuk mengambil data dari Appwrite
+    const fetchInfo = async () => {
+      // Jika tidak ada user, hentikan loading
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+      
+      // Tentukan kunci pencarian berdasarkan tipe user
+      const diseaseKey = (user.userType === 'user' ? user.disease : user.specialization)?.toLowerCase();
+      
+      if (diseaseKey) {
+        try {
+          setLoading(true);
+          const info = await getDiseaseInformation(diseaseKey);
+          setDiseaseInfo(info);
+        } catch (error) {
+          console.error("Gagal mengambil informasi penyakit:", error);
+          setDiseaseInfo(null); // Set info menjadi null jika terjadi error
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        // Jika tidak ada diseaseKey, hentikan loading
+        setLoading(false);
+      }
+    };
 
-  const diseaseInfo = getDiseaseInfo();
+    fetchInfo();
+  }, [user]); // Jalankan efek ini setiap kali objek user berubah
 
-  // --- KOMPONEN BARU UNTUK MERENDER KONTEN SECARA DINAMIS ---
+  // Komponen untuk merender blok konten secara dinamis
   const renderContentComponent = (item: ContentBlock, index: number) => {
     switch (item.type) {
       case 'heading':
@@ -87,6 +116,15 @@ const Info = () => {
     }
   };
 
+  // Tampilkan indikator loading saat data diambil
+  if (loading) {
+    return (
+      <SafeAreaView className="flex-1 justify-center items-center bg-primary-400">
+        <ActivityIndicator size="large" color="#1CD6CE" />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView className="flex-1 bg-primary-400">
       <ScrollView contentContainerStyle={{ paddingBottom: 100, paddingTop: 24, paddingHorizontal: 16 }}>
@@ -95,14 +133,16 @@ const Info = () => {
             <Text className="text-3xl font-rubik-bold text-primary-500 mb-4 pb-2 border-b-2 border-primary-100">
               {user.userType === 'user' ? 'Informasi' : 'Spesialisasi'}: {diseaseInfo.title}
             </Text>
-            {/* Merender konten secara dinamis */}
+            {/* Merender konten dari state diseaseInfo */}
             {diseaseInfo.content.map((item, index) => renderContentComponent(item, index))}
           </View>
         ) : (
-          <View className="flex-1 justify-center items-center p-4">
-            <Text className="text-lg text-gray-600 text-center">
-              {user ? "Informasi tidak tersedia untuk profil Anda." : "Silakan login untuk melihat informasi."}
-            </Text>
+          <View className="flex-1 justify-center items-center p-4 mt-20">
+            <View className="bg-white rounded-2xl shadow-lg p-6 w-full items-center">
+                <Text className="text-lg text-gray-600 text-center">
+                {user ? "Informasi tidak tersedia untuk profil Anda." : "Silakan login untuk melihat informasi."}
+                </Text>
+            </View>
           </View>
         )}
       </ScrollView>

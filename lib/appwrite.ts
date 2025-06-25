@@ -6,8 +6,7 @@ import {
   Databases,
   Models,
   Query,
-  Storage,
-  Functions
+  Storage
 } from "react-native-appwrite";
 
 // --- KONFIGURASI APPWRITE ---
@@ -24,9 +23,12 @@ export const config = {
   nutritionistChatCollectionId: process.env.EXPO_PUBLIC_APPWRITE_NUTRITIONIST_CHAT_COLLECTION_ID,
   storageBucketId: process.env.EXPO_PUBLIC_APPWRITE_STORAGE_BUCKET_ID || 'default',
   notificationsCollectionId: process.env.EXPO_PUBLIC_APPWRITE_NOTIFICATION_COLLECTION_ID,
+  diseaseInformationCollectionId:process.env.EXPO_PUBLIC_APPWRITE_DIASES_INFORMATION_COLLECTION_ID,
+
 
   loginlogCollectionId:process.env.EXPO_PUBLIC_APPWRITE_LOGINLOG_COLLECTION_ID,
   loginlogFunctionId:process.env.EXPO_PUBLIC_APPWRITE_LOGINLOG_FUNCTION_ID,
+
 };
 
 // --- INISIALISASI KLIEN ---
@@ -465,6 +467,33 @@ export async function markNotificationAsRead(notificationId: string) {
   } catch (error) {
     console.error('Error marking notification as read:', error);
     throw error;
+  }
+}
+
+//diases information
+export async function getDiseaseInformation(diseaseKey: string) {
+  try {
+    const response = await databases.listDocuments(
+      config.databaseId!,
+      config.diseaseInformationCollectionId!,
+      [
+        Query.equal('diseaseId', diseaseKey)
+      ]
+    );
+
+    if (response.documents.length > 0) {
+      const document = response.documents[0];
+      // Parsing konten yang disimpan sebagai string JSON
+      return {
+        title: document.title,
+        content: JSON.parse(document.content)
+      };
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error fetching disease information:', error);
+    throw new Error('Gagal mengambil informasi penyakit.');
   }
 }
 
