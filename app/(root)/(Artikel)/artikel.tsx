@@ -8,7 +8,7 @@ import React, { useEffect, useState } from 'react';
 import { FlatList, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const categories = ['Semua',"hipertensi", "diabetes","kanker", 'nutrisi', 'diet', 'kesehatan',  "gizi seimbang", 'olahraga', 'lifestyle'];
+const categories = ['Semua',"hipertensi", "diabetes","kanker", 'nutrisi', 'diet', 'kesehatan',  "gizi", 'olahraga', 'lifestyle'];
 
 const ArtikelScreen = () => {
   const { articles, loading, error, searchArticles, filteredArticles } = useArticles();
