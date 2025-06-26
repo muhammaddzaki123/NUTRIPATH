@@ -9,6 +9,8 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  KeyboardAvoidingView, 
+  Platform
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -57,69 +59,74 @@ export default function SignIn() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView
-        contentContainerStyle={{
-          flexGrow: 1,
-          justifyContent: "center",
-          alignItems: "center",
-          paddingHorizontal: 24, 
-        }}
+      {/* 2. Bungkus dengan KeyboardAvoidingView */}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
       >
-
-        <View className="w-full items-center">
-          {/* Logo */}
-          <Image
-            source={images.logoawal}
-            className="w-[220px] h-[220px]" 
-            resizeMode="contain"
-          />
-
-          <View className="mb-8">
-            <Text className="text-lg text-center font-rubik text-gray-600">
-              Selamat Datang Di
-            </Text>
-            <Text className="text-4xl font-rubik-bold text-gray-900 text-center mt-1">
-              NUTRIPATH
-            </Text>
-          </View>
-
-          <View className="w-full space-y-4">
-            <TextInput
-              placeholder="Email"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              className="border border-gray-300 rounded-lg px-4 py-4 text-base bg-white text-black mb-2"
-              placeholderTextColor="grey"
-            />
-            <TextInput
-              placeholder="Password"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              className="border border-gray-300 rounded-lg px-4 py-4 text-base bg-white text-black"
-              placeholderTextColor="grey"
+        <ScrollView
+          contentContainerStyle={{
+            flexGrow: 1,
+            justifyContent: "center",
+            alignItems: "center",
+            paddingHorizontal: 24,
+          }}
+        >
+          <View className="w-full items-center">
+            {/* Logo */}
+            <Image
+              source={images.logoawal}
+              className="w-[220px] h-[220px]"
+              resizeMode="contain"
             />
 
-            <TouchableOpacity
-              onPress={handleLogin}
-              disabled={isSubmitting}
-              className={`rounded-full py-4 items-center mt-4 ${
-                isSubmitting ? "bg-gray-400" : "bg-[#1CD6CE]"
-              }`}
-            >
-              {isSubmitting ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <Text className="text-white text-lg font-rubik-medium">
-                  Login
-                </Text>
-              )}
-            </TouchableOpacity>
+            <View className="mb-8">
+              <Text className="text-lg text-center font-rubik text-gray-600">
+                Selamat Datang Di
+              </Text>
+              <Text className="text-4xl font-rubik-bold text-gray-900 text-center mt-1">
+                NUTRIPATH
+              </Text>
+            </View>
+
+            <View className="w-full space-y-4">
+              <TextInput
+                placeholder="Email"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                className="border border-gray-300 rounded-lg px-4 py-4 text-base bg-white text-black mb-2"
+                placeholderTextColor="grey"
+              />
+              <TextInput
+                placeholder="Password"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                className="border border-gray-300 rounded-lg px-4 py-4 text-base bg-white text-black"
+                placeholderTextColor="grey"
+              />
+
+              <TouchableOpacity
+                onPress={handleLogin}
+                disabled={isSubmitting}
+                className={`rounded-full py-4 items-center mt-4 ${
+                  isSubmitting ? "bg-gray-400" : "bg-[#1CD6CE]"
+                }`}
+              >
+                {isSubmitting ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text className="text-white text-lg font-rubik-medium">
+                    Login
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
