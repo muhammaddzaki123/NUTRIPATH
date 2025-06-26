@@ -11,34 +11,46 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 const categories = ['Semua','hipertensi', 'diabetes','kanker', 'nutrisi', 'diet', 'kesehatan'];
 
 const ArtikelScreen = () => {
+  // Ganti nama 'filteredArticles' dari useArticles menjadi 'searchedArticles' agar tidak membingungkan
   const { articles, loading, error, searchArticles, filteredArticles: searchedArticles } = useArticles();
   const [selectedCategory, setSelectedCategory] = useState('Semua');
-  const [categoryFilteredArticles, setCategoryFilteredArticles] = useState<Article[]>([]);
+  // State baru untuk menampung hasil akhir setelah semua filter diterapkan
+  const [finalFilteredArticles, setFinalFilteredArticles] = useState<Article[]>([]);
   const params = useLocalSearchParams<{ query?: string }>();
 
-  // Handle search from URL params
+  // Efek untuk menangani pencarian teks dari komponen Search
   useEffect(() => {
     if (params.query) {
       searchArticles(params.query);
     } else {
-      // Jika tidak ada query pencarian, tampilkan semua artikel
+      // Jika query kosong, reset pencarian untuk menampilkan semua artikel
       searchArticles('');
     }
   }, [params.query]);
 
-  // Handle category filtering
+  // Efek untuk memfilter berdasarkan KATEGORI dan TAG
   useEffect(() => {
-    // Tentukan daftar artikel yang akan difilter: hasil pencarian jika ada, atau semua artikel jika tidak ada pencarian
+    // Tentukan artikel mana yang akan difilter: hasil pencarian jika ada, jika tidak, semua artikel
     const articlesToFilter = params.query ? searchedArticles : articles;
-    if (selectedCategory === 'Semua') {
-      setCategoryFilteredArticles(articlesToFilter);
-    } else {
-      // Filter artikel berdasarkan kategori yang dipilih
-      const filtered = articlesToFilter.filter(article => article.category.toLowerCase() === selectedCategory.toLowerCase());
-      setCategoryFilteredArticles(filtered);
-    }
-  }, [selectedCategory, articles, searchedArticles, params.query]);
 
+    if (selectedCategory === 'Semua') {
+      // Jika kategori 'Semua', tampilkan semua artikel (yang sudah melalui filter pencarian jika ada)
+      setFinalFilteredArticles(articlesToFilter);
+    } else {
+      const lowercasedCategory = selectedCategory.toLowerCase();
+      const filtered = articlesToFilter.filter(article => {
+        // Kondisi 1: Kategori artikel cocok dengan kategori yang dipilih
+        const categoryMatch = article.category.toLowerCase() === lowercasedCategory;
+        
+        // Kondisi 2: Salah satu tag di dalam artikel cocok dengan kategori yang dipilih
+        const tagMatch = article.tags.some(tag => tag.toLowerCase() === lowercasedCategory);
+
+        // Tampilkan artikel jika SALAH SATU kondisi terpenuhi (OR)
+        return categoryMatch || tagMatch;
+      });
+      setFinalFilteredArticles(filtered);
+    }
+  }, [selectedCategory, articles, searchedArticles, params.query]); // Dijalankan saat filter berubah
 
   const handleArticlePress = (article: Article) => {
     router.push({
@@ -50,17 +62,15 @@ const ArtikelScreen = () => {
   return (
     <SafeAreaView className='bg-primary-500 h-full p-2'>
       {/* Header */}
-        <View className="flex-row items-center pt-2 border-b border-white ">
-          {/* Tombol Panah: Kembali ke halaman sebelumnya */}
-          <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color="white" className="ml-2" />
-          </TouchableOpacity>
-          <Text className="text-white text-xl font-rubik-bold ml-4">ARTIKEL GIZI</Text>
-          {/* Tombol Silang: Kembali ke halaman utama */}
-          <TouchableOpacity onPress={() => router.replace('/')} className="ml-auto">
-            <Text className="text-3xl text-white mr-4">×</Text>
-          </TouchableOpacity>
-        </View>
+      <View className="flex-row items-center pt-2 border-b border-white ">
+        <TouchableOpacity onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color="white" className="ml-2" />
+        </TouchableOpacity>
+        <Text className="text-white text-xl font-rubik-bold ml-4">ARTIKEL GIZI</Text>
+        <TouchableOpacity onPress={() => router.replace('/')} className="ml-auto">
+          <Text className="text-3xl text-white mr-4">×</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Search */}
       <View className='flex flex-col '>
@@ -105,13 +115,13 @@ const ArtikelScreen = () => {
         <View className="flex-1 justify-center items-center">
           <Text className="text-white">{error}</Text>
         </View>
-      ) : categoryFilteredArticles.length === 0 ? (
+      ) : finalFilteredArticles.length === 0 ? (
         <View className="flex-1 justify-center items-center">
           <Text className="text-white">No articles found</Text>
         </View>
       ) : (
         <FlatList
-          data={categoryFilteredArticles}
+          data={finalFilteredArticles} // Menampilkan data dari hasil filter akhir
           renderItem={({item}) => (
             <Artikel 
               item={item} 
