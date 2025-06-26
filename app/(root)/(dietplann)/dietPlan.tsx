@@ -51,7 +51,7 @@ const DietPlan = () => {
   };
 
   return (
-    <SafeAreaView className='bg-primary-400 h-full p-4 '>
+    <SafeAreaView className='bg-primary-400 h-full p-4 mb-3 pb-3 '>
       <View className="flex-1 bg-primary-500 items-center-center rounded-xl mt-5" >
         {/* Header */}
         <View className="flex-row items-center pt-5 border-b border-white pb-2 mb-6">
@@ -187,7 +187,7 @@ const DietPlan = () => {
           <View className="flex-row justify-between">
             <TouchableOpacity
               onPress={calculateBMR}
-              className="bg-white py-3 px-6 rounded-full"
+              className="bg-white py-3 px-6 rounded-full mr-1"
             >
               <Text className="text-[#40E0D0] font-bold">HITUNG</Text>
             </TouchableOpacity>
@@ -203,7 +203,7 @@ const DietPlan = () => {
                     }
                   });
                 }}
-                className="bg-white py-3 px-6 rounded-full"
+                className="bg-white py-3 px-6 rounded-full ml-1"
               >
                 <Text className="text-[#40E0D0] font-bold">TEMUKAN DIET PLAN</Text>
               </TouchableOpacity>

@@ -3,9 +3,8 @@ import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/dat
 import { Picker } from '@react-native-picker/picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-// 1. Impor KeyboardAvoidingView dan Platform
-import { KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { foodRestrictions, urtOptions } from '../../../constants/food-restrictions';
+import { SafeAreaView, ScrollView, Text, TextInput, TouchableOpacity, View,KeyboardAvoidingView, Platform } from 'react-native';
+import { foodRestrictions, urtOptions } from '@/constants/food-restrictions';
 
 type FoodInput = {
   name: string;
@@ -82,17 +81,17 @@ const FoodInputRow = ({
         />
       </View>
       <View className="w-[120px] ml-2">
-        <View
-          className="bg-white rounded-2xl shadow-sm overflow-hidden h-12 flex justify-center"
+        <View 
+          className="bg-white rounded-2xl shadow-sm overflow-hidden h-12 flex justify-center" 
           style={{ elevation: 2 }}
         >
           <Picker
             selectedValue={value.unit}
             onValueChange={(text: string) => onChange({ ...value, unit: text })}
             mode="dropdown"
-            style={{
-              width: '100%',
-              backgroundColor: 'transparent',
+            style={{ 
+              width: '100%', 
+              backgroundColor: 'transparent', 
               color: 'black',
               marginVertical: -12,
             }}
@@ -214,7 +213,7 @@ export default function FoodRecallScreen() {
       }
     }));
   };
-
+  
   const updateSnackTime = (type: MealType, time: Date | null) => {
     setMeals(prev => ({
       ...prev,
@@ -248,8 +247,8 @@ export default function FoodRecallScreen() {
       const foodsWithMealInfo: EnhancedFoodInput[] = mealTypes.flatMap(mealType => {
         const meal = meals[mealType];
         const mealLabel = mealType === 'breakfast' ? 'Sarapan' :
-          mealType === 'lunch' ? 'Makan Siang' : 'Makan Malam';
-        return categories.flatMap(category =>
+                         mealType === 'lunch' ? 'Makan Siang' : 'Makan Malam';
+        return categories.flatMap(category => 
           meal[category]
             .filter(food => food.name.trim() !== '')
             .map(food => ({
@@ -267,7 +266,7 @@ export default function FoodRecallScreen() {
 
       const warningFoods: WarningFoodInput[] = foodsWithMealInfo
         .map(food => {
-          const restriction = restrictions.find((r: { name: string; maxAmount: number; unit: string }) =>
+          const restriction = restrictions.find((r: { name: string; maxAmount: number; unit: string }) => 
             r.name.toLowerCase() === food.name.toLowerCase()
           );
           if (restriction && parseInt(food.amount) > restriction.maxAmount) {
@@ -285,29 +284,29 @@ export default function FoodRecallScreen() {
       const timeWarnings: string[] = [];
       Object.entries(meals).forEach(([mealKey, mealData]) => {
         const type = mealKey as MealType;
-
+        
         // Buat objek Date untuk aturan waktu
         const getRuleTime = (rule: { hour: number; minute: number }) => {
-          const ruleDate = new Date();
-          ruleDate.setHours(rule.hour, rule.minute, 0, 0);
-          return ruleDate;
+            const ruleDate = new Date();
+            ruleDate.setHours(rule.hour, rule.minute, 0, 0);
+            return ruleDate;
         };
 
         // Cek waktu makan utama
         if (mealData.mealTime) {
-          const rule = mealTimeRules[type];
-          if (mealData.mealTime > getRuleTime(rule)) {
-            timeWarnings.push(`Waktu ${rule.label} melebihi batas anjuran (maksimal jam ${String(rule.hour).padStart(2, '0')}:${String(rule.minute).padStart(2, '0')}).`);
-          }
+            const rule = mealTimeRules[type];
+            if (mealData.mealTime > getRuleTime(rule)) {
+                timeWarnings.push(`Waktu ${rule.label} melebihi batas anjuran (maksimal jam ${String(rule.hour).padStart(2, '0')}:${String(rule.minute).padStart(2, '0')}).`);
+            }
         }
 
         // Cek waktu selingan
-        if (mealData.snackTime) {
-          const snackRuleKey = `${type}Snack` as keyof typeof mealTimeRules;
-          const rule = mealTimeRules[snackRuleKey];
-          if (rule && mealData.snackTime > getRuleTime(rule)) {
-            timeWarnings.push(`Waktu ${rule.label} melebihi batas anjuran (maksimal jam ${String(rule.hour).padStart(2, '0')}:${String(rule.minute).padStart(2, '0')}).`);
-          }
+        if(mealData.snackTime) {
+            const snackRuleKey = `${type}Snack` as keyof typeof mealTimeRules;
+            const rule = mealTimeRules[snackRuleKey];
+            if (rule && mealData.snackTime > getRuleTime(rule)) {
+                timeWarnings.push(`Waktu ${rule.label} melebihi batas anjuran (maksimal jam ${String(rule.hour).padStart(2, '0')}:${String(rule.minute).padStart(2, '0')}).`);
+            }
         }
       });
 
@@ -344,7 +343,7 @@ export default function FoodRecallScreen() {
       });
     }
   };
-
+  
   const handleBack = () => {
     if (mealType === 'dinner') {
       setMealType('lunch');
@@ -369,96 +368,97 @@ export default function FoodRecallScreen() {
 
   return (
     <SafeAreaView className='bg-primary-400 h-full p-4'>
-      <KeyboardAvoidingView
+    <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "padding"}
         style={{ flex: 1 }}
       >
-        <View className="flex-1 bg-primary-500 rounded-xl mt-5 mb-4" >
-          <View className="flex-row items-center pt-5 border-b border-white pb-2 mb-4">
-            <TouchableOpacity onPress={handleBack} className="p-2">
-              <Ionicons name="arrow-back" size={24} color="white" />
-            </TouchableOpacity>
-            <Text className="text-white text-xl font-bold ml-2">FOOD RECORD</Text>
-            <TouchableOpacity onPress={() => router.replace('/')} className="ml-auto p-2">
-              <Text className="text-3xl text-white mr-2">×</Text>
-            </TouchableOpacity>
-          </View>
+      <View className="flex-1 bg-primary-500 rounded-xl mt-5 mb-10" >
+        <View className="flex-row items-center pt-5 border-b border-white pb-2 mb-4">
+          <TouchableOpacity onPress={handleBack} className="p-2">
+            <Ionicons name="arrow-back" size={24} color="white" />
+          </TouchableOpacity>
+          <Text className="text-white text-xl font-bold ml-2">FOOD RECORD</Text>
+          <TouchableOpacity onPress={() => router.replace('/')} className="ml-auto p-2">
+            <Text className="text-3xl text-white mr-2">×</Text>
+          </TouchableOpacity>
+        </View>
 
-          <ScrollView className="flex-1 px-6 pb-5 mb-5" showsVerticalScrollIndicator={false}>
-            <View className="space-y-6">
-              <View className="bg-white/10 rounded-2xl mb-4 py-2">
-                <Text className="text-white text-2xl font-rubik-bold text-center">
-                  {mealType === 'breakfast' ? 'Makan Pagi' :
-                    mealType === 'lunch' ? 'Makan Siang' : 'Makan Malam'}
-                </Text>
-              </View>
-
-              <MealTimePicker
-                mealTime={currentMeal.mealTime}
-                onTimeChange={(time) => updateMealTime(mealType, time)}
-                mealLabel={mealType === 'breakfast' ? 'Sarapan' :
+        <ScrollView className="flex-1 px-6 pb-5 mb-5" showsVerticalScrollIndicator={false}>
+          <View className="space-y-6">
+            <View className="bg-white/10 rounded-2xl mb-4 py-2">
+              <Text className="text-white text-2xl font-rubik-bold text-center">
+                {mealType === 'breakfast' ? 'Makan Pagi' :
                   mealType === 'lunch' ? 'Makan Siang' : 'Makan Malam'}
-              />
-
-              <View className="space-y-6">
-                <View className="bg-white/10 rounded-2xl p-4 mb-2">
-                  <Text className="text-white text-lg font-rubik-semibold mb-4">Nasi/Karbohidrat</Text>
-                  {currentMeal.carbs.map((food, index) => (
-                    <FoodInputRow
-                      key={`carb-${index}`}
-                      value={food}
-                      onChange={(data) => updateFood(mealType, 'carbs', index, data)}
-                      placeholder="Contoh: Nasi Putih"
-                    />
-                  ))}
-                  <AddButton onPress={() => addRow(mealType, 'carbs')} label="Tambah Karbohidrat" />
-                </View>
-
-                <View className="bg-white/10 rounded-2xl p-4 mb-2">
-                  <Text className="text-white text-lg font-rubik-semibold mb-4">Lauk Pauk</Text>
-                  {currentMeal.others.map((food, index) => (
-                    <FoodInputRow
-                      key={`other-${index}`}
-                      value={food}
-                      onChange={(data) => updateFood(mealType, 'others', index, data)}
-                      placeholder="Contoh: Ayam Goreng"
-                    />
-                  ))}
-                  <AddButton onPress={() => addRow(mealType, 'others')} label="Tambah Lauk Pauk" />
-                </View>
-
-                <View className="bg-white/10 rounded-2xl p-4">
-                  <Text className="text-white text-lg font-rubik-semibold mb-4">Makanan Selingan</Text>
-                  <MealTimePicker
-                    mealTime={currentMeal.snackTime}
-                    onTimeChange={(time) => updateSnackTime(mealType, time)}
-                    mealLabel={`Selingan ${mealType === 'breakfast' ? 'Pagi' :
-                      mealType === 'lunch' ? 'Siang' : 'Malam'
-                      }`}
-                  />
-                  {currentMeal.snacks.map((food, index) => (
-                    <FoodInputRow
-                      key={`snack-${index}`}
-                      value={food}
-                      onChange={(data) => updateFood(mealType, 'snacks', index, data)}
-                      placeholder="Contoh: Buah Apel"
-                    />
-                  ))}
-                  <AddButton onPress={() => addRow(mealType, 'snacks')} label="Tambah Selingan" />
-                </View>
-              </View>
+              </Text>
             </View>
 
-            <TouchableOpacity
-              className="bg-white rounded-full py-4 px-6 my-5 items-center shadow-lg"
-              onPress={handleNext}
-            >
-              <Text className="text-[#40E0D0] font-semibold text-lg">
-                {mealType === 'dinner' ? 'CEK ASUPAN' : 'NEXT'}
-              </Text>
-            </TouchableOpacity>
-          </ScrollView>
-        </View>
+            <MealTimePicker
+              mealTime={currentMeal.mealTime}
+              onTimeChange={(time) => updateMealTime(mealType, time)}
+              mealLabel={mealType === 'breakfast' ? 'Sarapan' :
+                        mealType === 'lunch' ? 'Makan Siang' : 'Makan Malam'}
+            />
+
+            <View className="space-y-6">
+              <View className="bg-white/10 rounded-2xl p-4 mb-2">
+                <Text className="text-white text-lg font-rubik-semibold mb-4">Nasi/Karbohidrat</Text>
+                {currentMeal.carbs.map((food, index) => (
+                  <FoodInputRow
+                    key={`carb-${index}`}
+                    value={food}
+                    onChange={(data) => updateFood(mealType, 'carbs', index, data)}
+                    placeholder="Contoh: Nasi Putih"
+                  />
+                ))}
+                <AddButton onPress={() => addRow(mealType, 'carbs')} label="Tambah Karbohidrat" />
+              </View>
+
+              <View className="bg-white/10 rounded-2xl p-4 mb-2">
+                <Text className="text-white text-lg font-rubik-semibold mb-4">Lauk Pauk</Text>
+                {currentMeal.others.map((food, index) => (
+                  <FoodInputRow
+                    key={`other-${index}`}
+                    value={food}
+                    onChange={(data) => updateFood(mealType, 'others', index, data)}
+                    placeholder="Contoh: Ayam Goreng"
+                  />
+                ))}
+                <AddButton onPress={() => addRow(mealType, 'others')} label="Tambah Lauk Pauk" />
+              </View>
+
+              <View className="bg-white/10 rounded-2xl p-4">
+                <Text className="text-white text-lg font-rubik-semibold mb-4">Makanan Selingan</Text>
+                <MealTimePicker
+                  mealTime={currentMeal.snackTime}
+                  onTimeChange={(time) => updateSnackTime(mealType, time)}
+                  mealLabel={`Selingan ${
+                    mealType === 'breakfast' ? 'Pagi' :
+                    mealType === 'lunch' ? 'Siang' : 'Malam'
+                  }`}
+                />
+                {currentMeal.snacks.map((food, index) => (
+                  <FoodInputRow
+                    key={`snack-${index}`}
+                    value={food}
+                    onChange={(data) => updateFood(mealType, 'snacks', index, data)}
+                    placeholder="Contoh: Buah Apel"
+                  />
+                ))}
+                <AddButton onPress={() => addRow(mealType, 'snacks')} label="Tambah Selingan" />
+              </View>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            className="bg-white rounded-full py-4 px-6 my-5 items-center shadow-lg"
+            onPress={handleNext}
+          >
+            <Text className="text-[#40E0D0] font-semibold text-lg">
+              {mealType === 'dinner' ? 'CEK ASUPAN' : 'NEXT'}
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

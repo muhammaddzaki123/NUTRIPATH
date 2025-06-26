@@ -17,8 +17,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.muhammaddzaki.NUTRIPATH",
-      "softwareKeyboardLayoutMode": "adjustResize" 
+      "package": "com.muhammaddzaki.NUTRIPATH"
     },
     "web": {
       "bundler": "metro",

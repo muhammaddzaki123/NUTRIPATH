@@ -65,7 +65,7 @@ const Profile = () => {
     }
   };
 
-  const handleImagePick = async () => {
+const handleImagePick = async () => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       
@@ -77,6 +77,7 @@ const Profile = () => {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         allowsEditing: true,
+        aspect: [1, 1],
         quality: 1,
       });
 
@@ -89,6 +90,28 @@ const Profile = () => {
         }
         
         Alert.alert("Uploading...", "Please wait while we update your profile picture.");
+
+        // --- AWAL MODIFIKASI: HAPUS GAMBAR LAMA ---
+        if (user && user.avatar) {
+          try {
+            // Ekstrak file ID dari URL avatar lama
+            // URL biasanya dalam format: .../buckets/{bucketId}/files/{fileId}/view
+            const urlParts = user.avatar.split('/');
+            const fileIdIndex = urlParts.indexOf('files') + 1;
+            if (fileIdIndex > 0 && fileIdIndex < urlParts.length) {
+              const oldFileId = urlParts[fileIdIndex];
+              if (config.storageBucketId) {
+                 await storage.deleteFile(config.storageBucketId, oldFileId);
+                 console.log("Gambar profil lama berhasil dihapus:", oldFileId);
+              }
+            }
+          } catch (deleteError) {
+            // Jangan hentikan proses jika gagal menghapus file lama
+            // Mungkin file sudah tidak ada atau terjadi kesalahan lain
+            console.error("Gagal menghapus gambar profil lama:", deleteError);
+          }
+        }
+        // --- AKHIR MODIFIKASI ---
 
         const file = {
           name: `avatar-${user?.$id}-${Date.now()}.jpg`,
@@ -103,7 +126,7 @@ const Profile = () => {
 
         const uploadedFile = await storage.createFile(
           config.storageBucketId,
-          'unique()',
+          'unique()', // Appwrite akan menghasilkan ID unik
           file
         );
 
@@ -114,21 +137,17 @@ const Profile = () => {
              throw new Error("Collection ID is not configured.");
           }
             
-          if (user?.userType === 'nutritionist') {
-            await databases.updateDocument(
-              config.databaseId!,
-              config.ahligiziCollectionId,
-              user.$id,
-              { avatar: fileUrl.href }
-            );
-          } else {
-            await databases.updateDocument(
-              config.databaseId!,
-              config.usersProfileCollectionId,
-              user!.$id,
-              { avatar: fileUrl.href }
-            );
-          }
+          const collectionId = user?.userType === 'nutritionist' 
+              ? config.ahligiziCollectionId 
+              : config.usersProfileCollectionId;
+
+          await databases.updateDocument(
+            config.databaseId!,
+            collectionId,
+            user!.$id,
+            { avatar: fileUrl.href }
+          );
+          
           await refetch();
         } catch (updateError) {
           console.error('Error updating profile:', updateError);
