@@ -216,3 +216,26 @@ export const deleteMessage = async (messageId: string): Promise<void> => {
     throw new Error('Tidak dapat menghapus pesan ini.');
   }
 };
+
+export const deleteAllMessages = async (chatId: string): Promise<void> => {
+  try {
+    // 1. Ambil semua pesan dalam chat
+    const messages = await getChatMessages(chatId);
+
+    // 2. Buat array of promises untuk menghapus setiap pesan
+    const deletePromises = messages.map(message => 
+      databases.deleteDocument(
+        config.databaseId!,
+        config.chatMessagesCollectionId!,
+        message.$id
+      )
+    );
+
+    // 3. Jalankan semua promises secara paralel
+    await Promise.all(deletePromises);
+
+  } catch (error) {
+    console.error('Gagal menghapus semua pesan:', error);
+    throw new Error('Tidak dapat membersihkan riwayat percakapan ini.');
+  }
+};

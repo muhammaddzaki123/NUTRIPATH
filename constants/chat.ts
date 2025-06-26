@@ -64,6 +64,8 @@ export interface ChatContextType {
   markMessageAsRead: (messageId: string) => Promise<void>;
   unreadMessages: { [key: string]: number };
   loading: boolean;
+  deleteMessage: (messageId: string, chatId: string) => Promise<void>;
+  deleteAllMessages: (chatId: string) => Promise<void>;
 }
 
 export interface MessageState {

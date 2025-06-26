@@ -2,9 +2,8 @@
 
 import { useChat } from '@/components/ChatContext';
 import { Message, Nutritionist } from '@/constants/chat';
-import { deleteMessage } from '@/lib/chat-service'; // Impor fungsi hapus
 import { useGlobalContext } from '@/lib/global-provider';
-import { FontAwesome, Ionicons } from '@expo/vector-icons';
+import { FontAwesome, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -13,6 +12,7 @@ import {
   Image,
   Keyboard,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -31,7 +31,7 @@ const MessageBubble = ({
 }: {
   message: Message;
   isUser: boolean;
-  onLongPress: (messageId: string) => void;
+  onLongPress: (messageId: string, chatId: string) => void;
 }) => {
   const alignStyle = isUser ? 'items-end' : 'items-start';
   const bubbleStyle = isUser ? 'bg-primary-500' : 'bg-gray-200';
@@ -40,7 +40,7 @@ const MessageBubble = ({
   return (
     <View className={`w-full flex ${alignStyle} my-1`}>
       <TouchableOpacity
-        onLongPress={() => onLongPress(message.$id)}
+        onLongPress={() => onLongPress(message.$id, message.chatId)}
         activeOpacity={0.8}
         className={`max-w-[80%] p-3 rounded-2xl ${bubbleStyle}`}
       >
@@ -108,12 +108,14 @@ const ChatScreen = () => {
     markMessageAsRead,
     loading: chatLoading,
     setCurrentChat,
+    deleteMessage,
+    deleteAllMessages,
   } = useChat();
   const { user } = useGlobalContext();
   const [isSending, setIsSending] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
 
-  // Menentukan ID chat dan partner chat
   const { chatId, chatPartner } = useMemo(() => {
     if (!user || !partnerId) return { chatId: null, chatPartner: null };
 
@@ -124,7 +126,7 @@ const ChatScreen = () => {
       user.userType === 'nutritionist'
         ? (messages[computedChatId]?.[0]?.userDetails as Nutritionist) || {
             name: `User ${partnerId}`,
-            avatar: null,
+            avatar: '',
             status: 'offline',
           }
         : nutritionists.find((n: Nutritionist) => n.$id === partnerId);
@@ -132,7 +134,6 @@ const ChatScreen = () => {
     return { chatId: computedChatId, chatPartner: partner };
   }, [user, partnerId, messages, nutritionists]);
 
-  // Set chat saat ini dan tandai pesan sebagai sudah dibaca
   useEffect(() => {
     if (chatId) {
       setCurrentChat(chatId);
@@ -144,9 +145,8 @@ const ChatScreen = () => {
       });
     }
     return () => setCurrentChat(null);
-  }, [chatId]);
+  }, [chatId, messages, user, markMessageAsRead, setCurrentChat]);
 
-  // Scroll ke bawah saat ada pesan baru
   useEffect(() => {
     setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
   }, [messages[chatId || '']]);
@@ -164,7 +164,7 @@ const ChatScreen = () => {
     }
   };
 
-  const confirmDelete = (messageId: string) => {
+  const confirmDelete = (messageId: string, currentChatId: string) => {
     Alert.alert(
       'Hapus Pesan',
       'Apakah Anda yakin ingin menghapus pesan ini?',
@@ -173,24 +173,43 @@ const ChatScreen = () => {
         {
           text: 'Hapus',
           style: 'destructive',
-          onPress: () => handleDelete(messageId),
+          onPress: () => handleDelete(messageId, currentChatId),
         },
       ],
       { cancelable: true }
     );
   };
 
-  const handleDelete = async (messageId: string) => {
+  const handleDelete = async (messageId: string, currentChatId: string) => {
     try {
-      // Optimistic UI update (optional but good for UX)
-      // TODO: Implement optimistic update in ChatContext for better state management
-
-      await deleteMessage(messageId);
-      // The real-time subscription should handle the removal from the UI
+      await deleteMessage(messageId, currentChatId);
     } catch (error) {
       console.error('Gagal menghapus pesan:', error);
       Alert.alert('Error', 'Gagal menghapus pesan.');
     }
+  };
+
+  const handleClearChat = async () => {
+    if (!chatId) return;
+    setMenuVisible(false);
+    Alert.alert(
+      'Hapus Riwayat Chat',
+      'Tindakan ini akan menghapus semua pesan dalam percakapan ini secara permanen. Anda yakin?',
+      [
+        { text: 'Batal', style: 'cancel' },
+        {
+          text: 'Hapus Semua',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteAllMessages(chatId);
+            } catch (error) {
+              Alert.alert('Error', 'Gagal membersihkan riwayat chat.');
+            }
+          },
+        },
+      ]
+    );
   };
 
   if (chatLoading && !chatPartner) {
@@ -233,13 +252,15 @@ const ChatScreen = () => {
             <Text className="text-white/80 text-sm font-rubik">{chatPartner.status}</Text>
           </View>
         </View>
-        <View className="w-8" />
+        <TouchableOpacity onPress={() => setMenuVisible(true)} className="p-2">
+          <MaterialCommunityIcons name="dots-vertical" size={24} color="white" />
+        </TouchableOpacity>
       </View>
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
         <ScrollView
           ref={scrollViewRef}
@@ -266,6 +287,25 @@ const ChatScreen = () => {
 
         <MessageInput onSend={handleSend} isSending={isSending} />
       </KeyboardAvoidingView>
+
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={menuVisible}
+        onRequestClose={() => setMenuVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPressOut={() => setMenuVisible(false)}
+        >
+          <View style={styles.menuContainer}>
+            <TouchableOpacity style={styles.menuItem} onPress={handleClearChat}>
+              <Text style={styles.menuText}>Hapus Semua Pesan</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -273,7 +313,7 @@ const ChatScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0BBEBB', // Turquoise/Primary-500
+    backgroundColor: '#0BBEBB',
   },
   header: {
     flexDirection: 'row',
@@ -296,6 +336,32 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     paddingHorizontal: 16,
     paddingTop: 16,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-end',
+  },
+  menuContainer: {
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 10,
+    marginTop: 60,
+    marginRight: 10,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  menuItem: {
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+  },
+  menuText: {
+    fontSize: 16,
+    color: '#333',
   },
 });
 
