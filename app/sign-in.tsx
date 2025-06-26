@@ -4,13 +4,13 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
   View,
-  KeyboardAvoidingView, 
-  Platform
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -26,6 +26,10 @@ export default function SignIn() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // --- AWAL PERUBAHAN: State untuk visibilitas password ---
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  // --- AKHIR PERUBAHAN ---
 
   React.useEffect(() => {
     if (!loading && isLogged) {
@@ -59,7 +63,6 @@ export default function SignIn() {
         </TouchableOpacity>
       </View>
 
-      {/* 2. Bungkus dengan KeyboardAvoidingView */}
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
@@ -96,17 +99,32 @@ export default function SignIn() {
                 onChangeText={setEmail}
                 keyboardType="email-address"
                 autoCapitalize="none"
-                className="border border-gray-300 rounded-lg px-4 py-4 text-base bg-white text-black mb-2"
-                placeholderTextColor="grey"
-              />
-              <TextInput
-                placeholder="Password"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
                 className="border border-gray-300 rounded-lg px-4 py-4 text-base bg-white text-black"
                 placeholderTextColor="grey"
               />
+              
+              {/* --- AWAL PERUBAHAN: Input password dengan ikon mata --- */}
+              <View className="flex-row items-center border border-gray-300 rounded-lg bg-white px-4 mt-2">
+                <TextInput
+                  placeholder="Password"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!isPasswordVisible} // Dinamis berdasarkan state
+                  className="flex-1 py-4 text-base text-black"
+                  placeholderTextColor="grey"
+                />
+                <TouchableOpacity
+                  onPress={() => setIsPasswordVisible(!isPasswordVisible)}
+                  className="p-2"
+                >
+                  <Ionicons
+                    name={isPasswordVisible ? "eye-outline" : "eye-off-outline"}
+                    size={24}
+                    color="grey"
+                  />
+                </TouchableOpacity>
+              </View>
+              {/* --- AKHIR PERUBAHAN --- */}
 
               <TouchableOpacity
                 onPress={handleLogin}
