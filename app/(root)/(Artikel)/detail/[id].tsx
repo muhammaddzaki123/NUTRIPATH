@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, ScrollView, Text, TouchableOpacity, View, Dimensions, Modal } from 'react-native';
+import { ActivityIndicator, Dimensions, Image, Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const ArticleDetail = () => {
@@ -139,7 +139,7 @@ const ArticleDetail = () => {
                         </View>
                     </View>
                     
-                    {/* --- PERUBAHAN: Menghapus text-justify --- */}
+                    {/* --- PERBAIKAN: Menggunakan rata kiri (default) yang lebih aman --- */}
                     <Text className="text-base font-rubik text-black-200 leading-7">
                         {article.content}
                     </Text>
