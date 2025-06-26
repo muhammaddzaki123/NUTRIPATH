@@ -1,5 +1,3 @@
-// app/(root)/(Artikel)/detail/[id].tsx
-
 import { Article } from '@/constants/article';
 import { getArticleById } from '@/lib/appwrite';
 import { Ionicons } from '@expo/vector-icons';
@@ -60,14 +58,8 @@ const ArticleDetail = () => {
   });
 
   return (
-    // PERBAIKAN 1: SafeAreaView memiliki warna latar putih, karena kontennya dominan putih
     <SafeAreaView className="flex-1 bg-white">
-      {/* PERBAIKAN 2: StatusBar diatur menjadi 'dark' agar ikon terlihat di atas latar putih */}
       <StatusBar style="dark" />
-      
-      {/* PERBAIKAN 3: Header dibuat dengan layout yang lebih modern dan padding yang benar.
-        Sekarang posisinya absolut agar bisa "melayang" di atas gambar.
-      */}
       <View className="absolute top-0 left-0 right-0 z-10 pt-12">
           <View className="flex-row items-center justify-between px-4">
               <TouchableOpacity 
@@ -86,15 +78,13 @@ const ArticleDetail = () => {
       </View>
 
       <ScrollView className="flex-1">
-        {/* Article Image */}
         <Image 
           source={{ uri: article.image }}
-          className="w-full h-80" // Gambar dibuat lebih tinggi
+          className="w-full h-80"
           resizeMode="cover"
         />
         
         <View className="p-5">
-            {/* Category & Tags */}
             <View className="flex-row flex-wrap items-center gap-2 mb-4">
                 <View className="bg-primary-200 px-3 py-1 rounded-full">
                     <Text className="text-primary-500 font-rubik-medium">
