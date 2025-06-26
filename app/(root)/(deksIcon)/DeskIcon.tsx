@@ -22,7 +22,7 @@ const DeskIcon = () => {
         - 'pt-12' (padding-top: 48px) akan mendorong header ke bawah agar tidak tertutup status bar atau notch.
       */}
       <View className="flex-row items-center px-4 pb-4 pt-12 bg-primary-500 shadow-md">
-        <TouchableOpacity onPress={() => router.replace('/')} className="p-2">
+        <TouchableOpacity onPress={() => router.back()} className="p-2">
           <Ionicons name="arrow-back" size={24} color="white" />
         </TouchableOpacity>
         <Text className="flex-1 text-center text-white text-xl font-rubik-bold -ml-12">
