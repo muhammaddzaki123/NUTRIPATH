@@ -11,28 +11,34 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 const categories = ['Semua','hipertensi', 'diabetes','kanker', 'nutrisi', 'diet', 'kesehatan'];
 
 const ArtikelScreen = () => {
-  const { articles, loading, error, searchArticles, filteredArticles } = useArticles();
+  const { articles, loading, error, searchArticles, filteredArticles: searchedArticles } = useArticles();
   const [selectedCategory, setSelectedCategory] = useState('Semua');
+  const [categoryFilteredArticles, setCategoryFilteredArticles] = useState<Article[]>([]);
   const params = useLocalSearchParams<{ query?: string }>();
 
   // Handle search from URL params
   useEffect(() => {
     if (params.query) {
       searchArticles(params.query);
+    } else {
+      // Jika tidak ada query pencarian, tampilkan semua artikel
+      searchArticles('');
     }
   }, [params.query]);
 
   // Handle category filtering
   useEffect(() => {
-    if (!params.query) {
-      if (selectedCategory === 'Semua') {
-        searchArticles(''); // Reset to show all articles
-      } else {
-        const filtered = articles.filter(article => article.category === selectedCategory);
-        searchArticles(selectedCategory);
-      }
+    // Tentukan daftar artikel yang akan difilter: hasil pencarian jika ada, atau semua artikel jika tidak ada pencarian
+    const articlesToFilter = params.query ? searchedArticles : articles;
+    if (selectedCategory === 'Semua') {
+      setCategoryFilteredArticles(articlesToFilter);
+    } else {
+      // Filter artikel berdasarkan kategori yang dipilih
+      const filtered = articlesToFilter.filter(article => article.category.toLowerCase() === selectedCategory.toLowerCase());
+      setCategoryFilteredArticles(filtered);
     }
-  }, [selectedCategory]);
+  }, [selectedCategory, articles, searchedArticles, params.query]);
+
 
   const handleArticlePress = (article: Article) => {
     router.push({
@@ -99,13 +105,13 @@ const ArtikelScreen = () => {
         <View className="flex-1 justify-center items-center">
           <Text className="text-white">{error}</Text>
         </View>
-      ) : filteredArticles.length === 0 ? (
+      ) : categoryFilteredArticles.length === 0 ? (
         <View className="flex-1 justify-center items-center">
           <Text className="text-white">No articles found</Text>
         </View>
       ) : (
         <FlatList
-          data={filteredArticles}
+          data={categoryFilteredArticles}
           renderItem={({item}) => (
             <Artikel 
               item={item} 
