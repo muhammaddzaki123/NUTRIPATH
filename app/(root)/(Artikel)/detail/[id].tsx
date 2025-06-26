@@ -12,7 +12,7 @@ const ArticleDetail = () => {
     const [article, setArticle] = useState<Article | null>(null);
     const [loading, setLoading] = useState(true);
     const [imageAspectRatio, setImageAspectRatio] = useState(1);
-    const [isModalVisible, setModalVisible] = useState(false); // State untuk mengontrol visibilitas modal
+    const [isModalVisible, setModalVisible] = useState(false);
 
     useEffect(() => {
         const fetchArticle = async () => {
@@ -95,7 +95,6 @@ const ArticleDetail = () => {
             </View>
 
             <ScrollView className="flex-1">
-                {/* --- PERUBAHAN: Bungkus gambar dengan TouchableOpacity --- */}
                 <TouchableOpacity onPress={() => setModalVisible(true)}>
                     <Image
                         source={{ uri: article.image }}
@@ -140,13 +139,13 @@ const ArticleDetail = () => {
                         </View>
                     </View>
                     
-                    <Text className="text-base font-rubik text-black-200 leading-7 text-justify">
+                    {/* --- PERUBAHAN: Menghapus text-justify --- */}
+                    <Text className="text-base font-rubik text-black-200 leading-7">
                         {article.content}
                     </Text>
                 </View>
             </ScrollView>
 
-            {/* --- PENAMBAHAN: Modal untuk menampilkan gambar penuh --- */}
             <Modal
                 animationType="fade"
                 transparent={true}
