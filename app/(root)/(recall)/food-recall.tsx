@@ -45,7 +45,7 @@ const mealTimeRules = {
   lunch: { hour: 13, minute: 0, label: "Makan Siang" },
   lunchSnack: { hour: 16, minute: 0, label: "Selingan Siang" },
   dinner: { hour: 19, minute: 0, label: "Makan Malam" },
-  dinnerSnack: { hour: 20, minute: 0, label: "Selingan Malam" },
+  dinnerSnack: { hour: 22, minute: 0, label: "Selingan Malam" },
 };
 
 const FoodInputRow = ({
