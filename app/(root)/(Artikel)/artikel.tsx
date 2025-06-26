@@ -11,46 +11,34 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 const categories = ['Semua','hipertensi', 'diabetes','kanker', 'nutrisi', 'diet', 'kesehatan'];
 
 const ArtikelScreen = () => {
-  // Ganti nama 'filteredArticles' dari useArticles menjadi 'searchedArticles' agar tidak membingungkan
   const { articles, loading, error, searchArticles, filteredArticles: searchedArticles } = useArticles();
   const [selectedCategory, setSelectedCategory] = useState('Semua');
-  // State baru untuk menampung hasil akhir setelah semua filter diterapkan
   const [finalFilteredArticles, setFinalFilteredArticles] = useState<Article[]>([]);
   const params = useLocalSearchParams<{ query?: string }>();
 
-  // Efek untuk menangani pencarian teks dari komponen Search
   useEffect(() => {
     if (params.query) {
       searchArticles(params.query);
     } else {
-      // Jika query kosong, reset pencarian untuk menampilkan semua artikel
       searchArticles('');
     }
   }, [params.query]);
 
-  // Efek untuk memfilter berdasarkan KATEGORI dan TAG
   useEffect(() => {
-    // Tentukan artikel mana yang akan difilter: hasil pencarian jika ada, jika tidak, semua artikel
     const articlesToFilter = params.query ? searchedArticles : articles;
 
     if (selectedCategory === 'Semua') {
-      // Jika kategori 'Semua', tampilkan semua artikel (yang sudah melalui filter pencarian jika ada)
       setFinalFilteredArticles(articlesToFilter);
     } else {
       const lowercasedCategory = selectedCategory.toLowerCase();
       const filtered = articlesToFilter.filter(article => {
-        // Kondisi 1: Kategori artikel cocok dengan kategori yang dipilih
         const categoryMatch = article.category.toLowerCase() === lowercasedCategory;
-        
-        // Kondisi 2: Salah satu tag di dalam artikel cocok dengan kategori yang dipilih
         const tagMatch = article.tags.some(tag => tag.toLowerCase() === lowercasedCategory);
-
-        // Tampilkan artikel jika SALAH SATU kondisi terpenuhi (OR)
         return categoryMatch || tagMatch;
       });
       setFinalFilteredArticles(filtered);
     }
-  }, [selectedCategory, articles, searchedArticles, params.query]); // Dijalankan saat filter berubah
+  }, [selectedCategory, articles, searchedArticles, params.query]);
 
   const handleArticlePress = (article: Article) => {
     router.push({
@@ -121,7 +109,7 @@ const ArtikelScreen = () => {
         </View>
       ) : (
         <FlatList
-          data={finalFilteredArticles} // Menampilkan data dari hasil filter akhir
+          data={finalFilteredArticles}
           renderItem={({item}) => (
             <Artikel 
               item={item} 
