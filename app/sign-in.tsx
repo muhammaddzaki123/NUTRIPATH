@@ -103,13 +103,12 @@ export default function SignIn() {
                 placeholderTextColor="grey"
               />
               
-              {/* --- AWAL PERUBAHAN: Input password dengan ikon mata --- */}
               <View className="flex-row items-center border border-gray-300 rounded-lg bg-white px-4 mt-2">
                 <TextInput
                   placeholder="Password"
                   value={password}
                   onChangeText={setPassword}
-                  secureTextEntry={!isPasswordVisible} // Dinamis berdasarkan state
+                  secureTextEntry={!isPasswordVisible} 
                   className="flex-1 py-4 text-base text-black"
                   placeholderTextColor="grey"
                 />
@@ -124,7 +123,6 @@ export default function SignIn() {
                   />
                 </TouchableOpacity>
               </View>
-              {/* --- AKHIR PERUBAHAN --- */}
 
               <TouchableOpacity
                 onPress={handleLogin}
